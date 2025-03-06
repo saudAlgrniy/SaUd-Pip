@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>بث الفيديو عبر التورنت</title>
+  <!-- Plyr CSS -->
+  <link rel="stylesheet" href="https://cdn.plyr.io/3.7.2/plyr.css" />
+  <!-- FontAwesome CSS -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    /* الأساسيات */
+    body {
+      margin: 0;
+      padding: 20px;
+      font-family: 'Tajawal', sans-serif;
+      background: #f5f5f5;
+      color: #333;
+      text-align: center;
+    }
+    .container {
+      background: #fff;
+      border: 1px solid #ddd;
+      border-radius: 10px;
+      padding: 30px;
+      max-width: 700px;
+      margin: 20px auto;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    h2 {
+      margin-bottom: 20px;
+      font-size: 1.8em;
+      border-bottom: 1px solid #ddd;
+      padding-bottom: 10px;
+    }
+    input[type="text"] {
+      width: 90%;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      margin-bottom: 20px;
+      font-size: 1.1em;
+      text-align: center;
+    }
+    button {
+      padding: 10px 20px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      background: #fff;
+      font-size: 1.1em;
+      cursor: pointer;
+      margin: 5px;
+      transition: background 0.3s ease, box-shadow 0.3s ease;
+    }
+    button:hover {
+      background: #f0f0f0;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    /* مشغل الفيديو */
+    #videoContainer {
+      margin-top: 20px;
+      display: none;
+      border: 1px solid #ccc;
+      padding: 10px;
+      border-radius: 5px;
+      background: #fafafa;
+    }
+    video {
+      width: 100%;
+      height: auto;
+      border-radius: 5px;
+    }
+    #errorMessage {
+      color: red;
+      margin-bottom: 10px;
+      font-weight: bold;
+    }
+    /* تفاصيل التورنت */
+    #torrentDetails {
+      margin-top: 20px;
+      border: 1px solid #ccc;
+      padding: 15px;
+      border-radius: 5px;
+      text-align: left;
+      background: #fff;
+      display: none;
+    }
+    #torrentDetails p {
+      margin: 5px 0;
+      font-size: 0.95em;
+    }
+    /* اختيار الفيديو */
+    #videoSelection {
+      margin-top: 10px;
+      display: none;
+    }
+    #videoSelect {
+      padding: 8px;
+      font-size: 1.1em;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      background: #fff;
+    }
+    /* تنسيق المجلدات والملفات */
+    #torrentFiles {
+      margin-top: 20px;
+      text-align: left;
+    }
+    /* لضمان عرض العناصر من اليسار */
+    .folder-group,
+    .folder-header,
+    .files-list,
+    .file-item,
+    .file-info {
+      direction: ltr;
+      text-align: left;
+    }
+    .folder-group {
+      margin-bottom: 20px;
+      background: #fafafa;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      padding: 10px;
+      box-shadow: inset 0 1px 3px rgba(0,0,0,0.05);
+    }
+    .folder-header {
+      display: flex;
+      align-items: center;
+      border-bottom: 1px solid #ddd;
+      padding-bottom: 5px;
+      margin-bottom: 10px;
+      font-size: 1.1em;
+      font-weight: bold;
+      color: #555;
+      cursor: pointer;
+      justify-content: flex-start;
+    }
+    .folder-header i {
+      margin-right: 8px;
+      color: #f39c12;
+    }
+    .files-list {
+      display: none; /* يبدأ المجلد مغلقًا */
+    }
+    .file-item {
+      display: flex;
+      align-items: center;
+      padding: 8px;
+      border: 1px solid #eee;
+      border-radius: 4px;
+      margin-bottom: 8px;
+      background: #fff;
+      transition: background 0.3s;
+      cursor: default;
+    }
+    .file-item:hover {
+      background: #f7f7f7;
+    }
+    .file-item i {
+      font-size: 28px;
+      margin-right: 15px;
+    }
+    .file-info {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+    }
+    .file-info p {
+      margin: 0;
+      font-size: 1em;
+      font-weight: 600;
+      color: #333;
+      margin-right: 10px;
+    }
+    .file-info span {
+      font-size: 0.9em;
+      color: #888;
+    }
+    /* نافذة عرض الصورة */
+    #imageModal {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      overflow: auto;
+      background-color: rgba(0,0,0,0.8);
+    }
+    .modal-content {
+      position: relative;
+      margin: 5% auto;
+      max-width: 90%;
+      max-height: 90%;
+    }
+    .modal-content img {
+      width: 100%;
+      height: auto;
+      border-radius: 5px;
+      display: block;
+    }
+    .modal-close {
+      position: absolute;
+      top: -10px;
+      right: -10px;
+      background: #fff;
+      color: #333;
+      border-radius: 50%;
+      font-size: 24px;
+      width: 35px;
+      height: 35px;
+      text-align: center;
+      line-height: 35px;
+      cursor: pointer;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>🎥 Torrent Streaming</h2>
+    <input type="text" id="magnetLink" placeholder="Enter Magnet Link here...">
+    <button onclick="startStreaming()">Stream Video</button>
+    <div id="errorMessage"></div>
+
+    <!-- منطقة عرض الفيديو -->
+    <div id="videoContainer">
+      <h3>: Video</h3>
+      <video id="videoPlayer" controls crossorigin playsinline>
+        <source src="" type="video/mp4">
+        <p>Please enable JavaScript or upgrade your browser to support HTML5 video.</p>
+      </video>
+      <button id="copyLinkButton" onclick="copyLink()">Copy Stream Link</button>
+    </div>
+
+    <!-- قائمة اختيار الفيديو في حال وجود أكثر من ملف فيديو -->
+    <div id="videoSelection">
+      <label for="videoSelect">Choose video :</label>
+      <select id="videoSelect" onchange="changeVideo()"></select>
+    </div>
+
+    <!-- تفاصيل التورنت -->
+    <div id="torrentDetails">
+      <h3>: Torrent Details</h3>
+      <p id="torrentName"></p>
+      <p id="torrentAccessCount"></p>
+      <p id="torrentPeers"></p>
+      <p id="torrentSeeders"></p>
+      <p id="torrentLeechers"></p>
+      <div id="torrentFiles"></div>
+    </div>
+  </div>
+
+  <!-- نافذة منبثقة لعرض الصورة -->
+  <div id="imageModal">
+    <div class="modal-content">
+      <span class="modal-close" onclick="closeImageModal()">&times;</span>
+      <img src="" alt="Preview">
+    </div>
+  </div>
+  
+  <!-- Plyr JS -->
+  <script src="https://cdn.plyr.io/3.7.2/plyr.polyfilled.js"></script>
+  <script>
+    const player = new Plyr('#videoPlayer');
+    let currentMagnetLink = '';
+    let currentFileIndex = '0';
+    // متغير لتخزين حالة المجلدات
+    let openFolders = {};
+
+    function startStreaming() {
+      const magnetLink = document.getElementById('magnetLink').value.trim();
+      const videoContainer = document.getElementById('videoContainer');
+      const errorMessage = document.getElementById('errorMessage');
+
+      if (!magnetLink) {
+        errorMessage.textContent = '⚠️ Please enter a Magnet link!';
+        videoContainer.style.display = 'none';
+        return;
+      }
+
+      errorMessage.textContent = '';
+      currentMagnetLink = magnetLink;
+      currentFileIndex = '0';
+      
+      // تحديث مصدر الفيديو باستخدام Plyr
+      const videoSrc = `/stream?magnet=${encodeURIComponent(magnetLink)}&fileIndex=0`;
+      player.source = {
+        type: 'video',
+        sources: [{
+          src: videoSrc,
+          type: 'video/mp4'
+        }]
+      };
+      videoContainer.style.display = 'block';
+
+      // جلب وتحديث تفاصيل التورنت
+      fetchTorrentDetails(magnetLink);
+      startAutoUpdate();
+    }
+
+    function copyLink() {
+      if (currentMagnetLink) {
+        let url = `/stream?magnet=${encodeURIComponent(currentMagnetLink)}`;
+        if (currentFileIndex !== "0") {
+          url += `&fileIndex=${currentFileIndex}`;
+        }
+        navigator.clipboard.writeText(`http://localhost:3000${url}`)
+          .then(() => {
+            const copyButton = document.getElementById('copyLinkButton');
+            const originalText = "Copy Stream Link";
+            copyButton.innerHTML = '✔️ Copied';
+            setTimeout(() => {
+              copyButton.innerHTML = originalText;
+            }, 2000);
+          })
+          .catch(err => {
+            console.error('Error copying link:', err);
+            alert('Failed to copy link!');
+          });
+      } else {
+        alert('Video not streaming yet!');
+      }
+    }
+
+    function changeVideo() {
+      const videoSelect = document.getElementById('videoSelect');
+      currentFileIndex = videoSelect.value;
+      const videoSrc = `/stream?magnet=${encodeURIComponent(currentMagnetLink)}&fileIndex=${currentFileIndex}`;
+      player.source = {
+        type: 'video',
+        sources: [{
+          src: videoSrc,
+          type: 'video/mp4'
+        }]
+      };
+      player.play();
+    }
+
+    function fetchTorrentDetails(magnetLink) {
+      fetch(`/torrent-info?magnet=${encodeURIComponent(magnetLink)}`)
+        .then(response => response.json())
+        .then(data => {
+          if (data.error) {
+            console.error(data.error);
+            return;
+          }
+          document.getElementById('torrentDetails').style.display = 'block';
+          document.getElementById('torrentName').textContent = `Torrent Name: ${data.name}`;
+          document.getElementById('torrentAccessCount').textContent = `Listeners: ${data.accessCount}`;
+          document.getElementById('torrentPeers').textContent = `Peers: ${data.numPeers}`;
+          document.getElementById('torrentSeeders').textContent = `Seeders: ${data.seeds}`;
+          document.getElementById('torrentLeechers').textContent = `Leechers: ${data.leechers}`;
+
+          // تحديث قائمة اختيار الفيديو إذا وُجد أكثر من ملف فيديو
+          const videoSelect = document.getElementById('videoSelect');
+          const videoFiles = data.files.filter(f => {
+            const lower = f.name.toLowerCase();
+            return lower.endsWith('.mp4') || lower.endsWith('.mkv');
+          });
+          if (videoFiles.length > 1) {
+            const currentSelection = videoSelect.value;
+            videoSelect.innerHTML = '';
+            videoFiles.forEach(file => {
+              const option = document.createElement('option');
+              option.value = file.index;
+              option.textContent = '🎥 ' + file.name;
+              videoSelect.appendChild(option);
+            });
+            if (currentSelection && [...videoSelect.options].some(o => o.value === currentSelection)) {
+              videoSelect.value = currentSelection;
+              currentFileIndex = currentSelection;
+            } else {
+              videoSelect.value = videoSelect.options[0].value;
+              currentFileIndex = videoSelect.options[0].value;
+            }
+            document.getElementById('videoSelection').style.display = 'block';
+          } else {
+            document.getElementById('videoSelection').style.display = 'none';
+          }
+
+          // تنظيم الملفات ضمن مجلدات (مع إضافة مجموعة لـ txt)
+          const torrentFilesElement = document.getElementById('torrentFiles');
+          torrentFilesElement.innerHTML = '<strong>: Torrent Files</strong>';
+          const groups = {
+            videos: [],
+            images: [],
+            subtitles: [],
+            txt: [],
+            others: []
+          };
+
+          data.files.forEach(file => {
+            const lowerName = file.name.toLowerCase();
+            if (lowerName.endsWith('.mp4') || lowerName.endsWith('.mkv')) {
+              groups.videos.push(file);
+            } else if (/\.(jpg|jpeg|png|gif)$/.test(lowerName)) {
+              groups.images.push(file);
+            } else if (lowerName.endsWith('.srt')) {
+              groups.subtitles.push(file);
+            } else if (lowerName.endsWith('.txt')) {
+              groups.txt.push(file);
+            } else {
+              groups.others.push(file);
+            }
+          });
+
+          // دالة لإنشاء عنصر ملف بناءً على نوعه
+          function createFileItem(file, groupType) {
+            let iconClass = '';
+            let iconColor = '';
+            if (groupType === 'videos') {
+              iconClass = 'fa-solid fa-file-video';
+              iconColor = '#ff4500';
+            } else if (groupType === 'images') {
+              iconClass = 'fa-solid fa-file-image';
+              iconColor = '#1e90ff';
+            } else if (groupType === 'subtitles') {
+              iconClass = 'fa-solid fa-closed-captioning';
+              iconColor = '#32cd32';
+            } else if (groupType === 'txt') {
+              iconClass = 'fa-solid fa-file-lines';
+              iconColor = '#8a2be2';
+            } else {
+              iconClass = 'fa-solid fa-file';
+              iconColor = '#6c757d';
+            }
+
+            const fileItem = document.createElement('div');
+            fileItem.className = 'file-item';
+
+            const iconElement = document.createElement('i');
+            iconElement.className = iconClass;
+            iconElement.style.color = iconColor;
+            fileItem.appendChild(iconElement);
+
+            const infoDiv = document.createElement('div');
+            infoDiv.className = 'file-info';
+            const fileName = document.createElement('p');
+            fileName.textContent = file.name;
+            const fileSize = document.createElement('span');
+            fileSize.textContent = `(${file.length} bytes)`;
+            infoDiv.appendChild(fileName);
+            infoDiv.appendChild(fileSize);
+            fileItem.appendChild(infoDiv);
+
+            // إذا كان الملف من نوع صورة، إضافة حدث لعرضها
+            if (groupType === 'images') {
+              fileItem.style.cursor = 'pointer';
+              fileItem.addEventListener('click', () => openImageModal(file));
+            }
+            return fileItem;
+          }
+
+          // دالة إنشاء مجموعة مجلد مع تبديل الحالة (فتح/إغلاق) عند النقر على الرأس
+          function createFolderGroup(title, groupType, filesArray) {
+            if (filesArray.length === 0) return null;
+            const groupDiv = document.createElement('div');
+            groupDiv.className = 'folder-group';
+
+            const header = document.createElement('div');
+            header.className = 'folder-header';
+
+            const folderIcon = document.createElement('i');
+            // تعيين الرمز بناءً على حالة المجلد المخزنة
+            folderIcon.className = openFolders[title] ? 'fa-solid fa-folder-open' : 'fa-solid fa-folder';
+            header.appendChild(folderIcon);
+
+            const titleText = document.createElement('span');
+            titleText.textContent = ' ' + title;
+            header.appendChild(titleText);
+
+            groupDiv.appendChild(header);
+
+            const filesList = document.createElement('div');
+            filesList.className = 'files-list';
+            // تعيين طريقة العرض بناءً على الحالة المخزنة
+            filesList.style.display = openFolders[title] ? 'block' : 'none';
+            filesArray.forEach(file => {
+              const fileItem = createFileItem(file, groupType);
+              filesList.appendChild(fileItem);
+            });
+            groupDiv.appendChild(filesList);
+
+            // عند النقر على الرأس، يتم تبديل حالة العرض وتحديث الكائن openFolders
+            header.addEventListener('click', () => {
+              if (filesList.style.display === 'none') {
+                filesList.style.display = 'block';
+                folderIcon.className = 'fa-solid fa-folder-open';
+                openFolders[title] = true;
+              } else {
+                filesList.style.display = 'none';
+                folderIcon.className = 'fa-solid fa-folder';
+                openFolders[title] = false;
+              }
+            });
+
+            return groupDiv;
+          }
+
+          // إنشاء وعرض المجلدات حسب نوع الملفات
+          const groupsOrder = [
+            { title: 'Videos', type: 'videos', files: groups.videos },
+            { title: 'Images', type: 'images', files: groups.images },
+            { title: 'Subtitles', type: 'subtitles', files: groups.subtitles },
+            { title: 'Text Files', type: 'txt', files: groups.txt },
+            { title: 'Others', type: 'others', files: groups.others }
+          ];
+
+          groupsOrder.forEach(group => {
+            const groupElement = createFolderGroup(group.title, group.type, group.files);
+            if (groupElement) {
+              torrentFilesElement.appendChild(groupElement);
+            }
+          });
+        })
+        .catch(err => console.error('Error fetching torrent details:', err));
+    }
+
+    let autoUpdateInterval;
+    function startAutoUpdate() {
+      if (autoUpdateInterval) clearInterval(autoUpdateInterval);
+      autoUpdateInterval = setInterval(() => {
+        if (currentMagnetLink) {
+          fetchTorrentDetails(currentMagnetLink);
+        }
+      }, 1000);
+    }
+
+    // دوال عرض الصورة في النافذة المنبثقة
+    function openImageModal(file) {
+      const imageURL = `/stream?magnet=${encodeURIComponent(currentMagnetLink)}&fileIndex=${file.index}`;
+      const modal = document.getElementById('imageModal');
+      modal.querySelector('img').src = imageURL;
+      modal.style.display = 'block';
+    }
+    function closeImageModal() {
+      document.getElementById('imageModal').style.display = 'none';
+    }
+    // إغلاق النافذة عند النقر خارج المحتوى
+    window.onclick = function(event) {
+      const modal = document.getElementById('imageModal');
+      if (event.target === modal) {
+        modal.style.display = 'none';
+      }
+    }
+  </script>
+</body>
+</html>
