@@ -3,9 +3,6 @@ import WebTorrent from 'webtorrent';
 import magnetUri from 'magnet-uri';
 import { pipeline } from 'stream';
 import { EventEmitter } from 'events';
-import path from 'path';
-import ffmpeg from 'fluent-ffmpeg';
-import fs from 'fs';
 
 EventEmitter.defaultMaxListeners = 100;
 
@@ -14,10 +11,14 @@ const client = new WebTorrent();
 const activeTorrents = new Map();
 const torrentAccessCount = new Map(); // لتخزين عدد المستمعين لكل تورنت
 
+// متغير لتخزين الهاش الخاص بالتورنت الحالي
 let currentTorrentHash = null;
 
 // تفعيل الكاش للملفات الثابتة لتحسين سرعة التحميل
-app.use(express.static('public', { maxAge: '1d', etag: false }));
+app.use(express.static('public', {
+  maxAge: '1d',
+  etag: false
+}));
 
 const getMimeType = (filename) => {
   if (filename.endsWith('.mp4')) return 'video/mp4';
@@ -27,25 +28,36 @@ const getMimeType = (filename) => {
 
 function parseRange(range, fileSize) {
   if (!range) return { start: 0, end: fileSize - 1 };
-  const parts = range.replace(/bytes=/, '').split('-');
+
+  // إزالة "bytes=" والتخلص من الفراغات الزائدة
+  const parts = range.replace(/bytes=/, '').trim().split('-');
   let start = parseInt(parts[0], 10);
   let end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+
   if (isNaN(start) || start < 0) start = 0;
   if (isNaN(end) || end >= fileSize) end = fileSize - 1;
+
+  // إذا كانت قيمة البداية أكبر من النهاية، نستخدم النطاق الكامل بدل رمي الخطأ
   if (start > end) {
-    // بدلاً من رمي خطأ، نقوم بتعديل القيمة
-    console.warn(`Adjusted range: start (${start}) is greater than end (${end}), setting start to end.`);
-    start = end;
+    console.warn('Invalid range: start is greater than end. Streaming full file.');
+    start = 0;
+    end = fileSize - 1;
   }
   return { start, end };
 }
 
-const sendStream = (torrent, file, range, res) => {
+const sendStream = (torrent, file, range, res, customRange = null) => {
   let startByte = 0;
   let endByte = file.length - 1;
   let statusCode = 200;
 
-  if (range) {
+  if (customRange) {
+    startByte = customRange.startByte;
+    endByte = customRange.endByte;
+    statusCode = 206;
+    res.set('Content-Range', `bytes ${startByte}-${endByte}/${file.length}`);
+    res.set('Accept-Ranges', 'bytes');
+  } else if (range) {
     try {
       const parsed = parseRange(range, file.length);
       startByte = parsed.start;
@@ -62,36 +74,40 @@ const sendStream = (torrent, file, range, res) => {
   res.set('Content-Type', getMimeType(file.name));
   res.status(statusCode);
 
+  // إذا وُجد stream سابق للتورنت، يتم تدميره لتحسين الأداء
+  if (torrent._currentReadStream) {
+    torrent._currentReadStream.destroy();
+  }
+
   const readStream = file.createReadStream({ start: startByte, end: endByte });
+  torrent._currentReadStream = readStream;
   pipeline(readStream, res, (err) => {
     if (err && err.code !== 'ERR_STREAM_PREMATURE_CLOSE') {
       console.error('Stream error:', err);
     }
+    torrent._currentReadStream = null;
   });
 };
 
-// دالة استخدام ffprobe للحصول على مدة الفيديو (بالثواني)
-const getVideoDuration = (filePath) => {
-  return new Promise((resolve, reject) => {
-    ffmpeg.ffprobe(filePath, (err, metadata) => {
-      if (err) return reject(err);
-      resolve(metadata.format.duration);
-    });
-  });
-};
-
-// تعديل handleTorrent بحيث يتم استخدام مدة الفيديو في حالة طلب وقت معين
-const handleTorrent = async (torrent, range, res, fileIndex = 0, time) => {
+const handleTorrent = (torrent, range, res, fileIndex = 0, startMinute = null, endMinute = null) => {
+  // تحديث وقت الوصول الأخير للتورنت
   torrent.lastAccess = Date.now();
 
+  // تصفية الملفات للحصول على ملفات الفيديو فقط (mp4 أو mkv)
   const videoFiles = torrent.files.filter(f => f.name.endsWith('.mp4') || f.name.endsWith('.mkv'));
+
   if (videoFiles.length === 0) {
     return res.status(404).send('No MP4 or MKV video found in this torrent.');
   }
+
   if (fileIndex < 0 || fileIndex >= videoFiles.length) {
     return res.status(400).send('Invalid fileIndex parameter.');
   }
+
+  // إلغاء تحديد جميع الملفات لضمان تحميل الملف المحدد فقط
   torrent.files.forEach(file => file.deselect());
+
+  // تحديد الملف المطلوب فقط
   const selectedFile = videoFiles[fileIndex];
   selectedFile.select();
 
@@ -100,44 +116,26 @@ const handleTorrent = async (torrent, range, res, fileIndex = 0, time) => {
     torrent._lastFileIndex = fileIndex;
   }
 
-  // الحصول على مدة الفيديو الفعلية تلقائيًا
-  const filePath = path.resolve('downloads', selectedFile.path);
-  if (!fs.existsSync(filePath)) {
-    console.error(`File not found at path: ${filePath}`);
-    return res.status(404).send('Video file not found.');
-  }
-  let actualDuration;
-  if (selectedFile.actualDuration) {
-    actualDuration = selectedFile.actualDuration;
-  } else {
-    try {
-      actualDuration = await getVideoDuration(filePath);
-      selectedFile.actualDuration = actualDuration;
-      console.log(`Actual video duration: ${actualDuration} seconds`);
-    } catch (err) {
-      console.error('Error getting video duration:', err);
-      actualDuration = 7200; // قيمة احتياطية (120 دقيقة)
-      selectedFile.actualDuration = actualDuration;
+  // حساب النطاق المخصص إذا وُجد طلب للتحميل الجزئي حسب الدقائق
+  let customRange = null;
+  if (startMinute !== null) {
+    const startMin = parseFloat(startMinute);
+    const endMin = endMinute ? parseFloat(endMinute) : null;
+    // التحقق من صحة معلمات الدقائق
+    if (endMin !== null && startMin > endMin) {
+      return res.status(416).send('Invalid minute range: startMinute is greater than endMinute');
     }
-  }
-  
-  // إذا تم تمرير وقت محدد (بالثواني) يتم تحويله إلى نطاق بايتات
-  if (time !== undefined) {
-    const requestedTime = parseFloat(time);
-    if (!isNaN(requestedTime) && requestedTime >= 0 && requestedTime <= actualDuration) {
-      const offset = Math.floor((requestedTime / actualDuration) * selectedFile.length);
-      range = `bytes=${offset}-${selectedFile.length - 1}`;
-      console.log(`Seeking to time ${requestedTime}s, which corresponds to byte offset ${offset}`);
-    } else {
-      console.warn('Invalid time parameter, ignoring.');
-    }
-  } else if (!range) {
-    // إذا لم يتم تمرير range يتم تحديد نطاق افتراضي بناءً على البيانات المتوفرة
-    const available = selectedFile.downloaded > 0 ? selectedFile.downloaded : selectedFile.length;
-    range = `bytes=0-${Math.min(available, selectedFile.length) - 1}`;
+    // نفترض مدة فيديو افتراضية، مثلاً 120 دقيقة (7200 ثانية)
+    const DEFAULT_VIDEO_DURATION = 7200; // بالثواني
+    const startTimeSec = startMin * 60;
+    const endTimeSec = endMin ? endMin * 60 : DEFAULT_VIDEO_DURATION;
+    customRange = {
+      startByte: Math.floor(selectedFile.length * (startTimeSec / DEFAULT_VIDEO_DURATION)),
+      endByte: Math.floor(selectedFile.length * (endTimeSec / DEFAULT_VIDEO_DURATION))
+    };
   }
 
-  sendStream(torrent, selectedFile, range, res);
+  sendStream(torrent, selectedFile, range, res, customRange);
 };
 
 const removeTorrent = (torrentHash) => {
@@ -155,7 +153,7 @@ const removeTorrent = (torrentHash) => {
   }
 };
 
-const addTorrentIfNotExist = (magnetLink, res, range, fileIndex = 0, time) => {
+const addTorrentIfNotExist = (magnetLink, res, range, fileIndex = 0, startMinute = null, endMinute = null) => {
   let parsedMagnet;
   try {
     parsedMagnet = magnetUri(magnetLink);
@@ -165,7 +163,7 @@ const addTorrentIfNotExist = (magnetLink, res, range, fileIndex = 0, time) => {
   }
   const torrentHash = parsedMagnet.infoHash;
 
-  // إزالة التورنتات الأخرى لتقليل استهلاك الموارد
+  // إزالة كل التورنتات غير التورنت الجاري بثه لتقليل استهلاك الموارد
   activeTorrents.forEach((torrent, key) => {
     if (key !== torrentHash) {
       removeTorrent(key);
@@ -173,6 +171,7 @@ const addTorrentIfNotExist = (magnetLink, res, range, fileIndex = 0, time) => {
   });
   currentTorrentHash = torrentHash;
 
+  // تحديث عدد المستمعين للتورنت الحالي
   const currentCount = torrentAccessCount.get(torrentHash) || 0;
   torrentAccessCount.set(torrentHash, currentCount + 1);
 
@@ -183,11 +182,7 @@ const addTorrentIfNotExist = (magnetLink, res, range, fileIndex = 0, time) => {
       console.log(`Resuming streaming torrent: "${torrent.name}"`);
       torrent._hasLoggedResume = true;
     }
-    handleTorrent(torrent, range, res, parseInt(fileIndex, 10), time)
-      .catch(err => {
-        console.error(err);
-        if (!res.headersSent) res.status(500).send('Error streaming video');
-      });
+    handleTorrent(torrent, range, res, parseInt(fileIndex, 10), startMinute, endMinute);
   } else {
     console.log('\nAdding new torrent...');
     client.add(magnetLink, { path: 'downloads' }, (torrent) => {
@@ -203,26 +198,25 @@ const addTorrentIfNotExist = (magnetLink, res, range, fileIndex = 0, time) => {
       activeTorrents.set(torrentHash, torrent);
       console.log(`Started streaming torrent: "${torrent.name}"`);
       torrent._hasLoggedResume = true;
-      handleTorrent(torrent, range, res, parseInt(fileIndex, 10), time)
-        .catch(err => {
-          console.error(err);
-          if (!res.headersSent) res.status(500).send('Error streaming video');
-        });
+      handleTorrent(torrent, range, res, parseInt(fileIndex, 10), startMinute, endMinute);
     });
   }
 };
 
+// نقطة النهاية لبث الفيديو مع دعم fileIndex وطلبات النطاق (range) ومعلمات الدقائق
 app.get('/stream', (req, res) => {
   const magnet = req.query.magnet;
-  const fileIndex = req.query.fileIndex || 0;
+  const fileIndex = req.query.fileIndex || 0; // الافتراضي هو 0
   const range = req.headers.range;
-  const time = req.query.t; // وقت البدء (بالثواني)
+  const startMinute = req.query.startMinute || null;
+  const endMinute = req.query.endMinute || null;
   if (!magnet) {
     return res.status(400).send('Please provide a Magnet link.');
   }
-  addTorrentIfNotExist(magnet, res, range, fileIndex, time);
+  addTorrentIfNotExist(magnet, res, range, fileIndex, startMinute, endMinute);
 });
 
+// نقطة النهاية لاسترجاع تفاصيل التورنت
 app.get('/torrent-info', (req, res) => {
   const magnet = req.query.magnet;
   if (!magnet) {
@@ -253,7 +247,7 @@ app.get('/torrent-info', (req, res) => {
       numPeers: torrent.numPeers,
       seeds: seeds,
       leechers: leechers,
-      progress: torrent.progress,
+      progress: torrent.progress, // قيمة التقدم (0 إلى 1)
       files: torrent.files.map((f, index) => ({ index, name: f.name, length: f.length }))
     };
     return res.json(info);
@@ -262,6 +256,7 @@ app.get('/torrent-info', (req, res) => {
   }
 });
 
+// نقطة النهاية لإيقاف التورنت مؤقتًا
 app.get('/torrent/pause', (req, res) => {
   const magnet = req.query.magnet;
   if (!magnet) {
@@ -290,6 +285,7 @@ app.get('/torrent/pause', (req, res) => {
   }
 });
 
+// نقطة النهاية لاستئناف التورنت
 app.get('/torrent/resume', (req, res) => {
   const magnet = req.query.magnet;
   if (!magnet) {
@@ -318,6 +314,7 @@ app.get('/torrent/resume', (req, res) => {
   }
 });
 
+// نقطة النهاية لإزالة التورنت نهائيًا
 app.get('/torrent/remove', (req, res) => {
   const magnet = req.query.magnet;
   if (!magnet) {
@@ -338,17 +335,18 @@ app.get('/torrent/remove', (req, res) => {
   return res.json({ message: 'Torrent removed successfully.' });
 });
 
+// آلية تنظيف للتورنتات غير النشطة بعد 5 دقائق من عدم الاستخدام
 setInterval(() => {
   const now = Date.now();
   activeTorrents.forEach((torrent, hash) => {
-    if (now - torrent.lastAccess > 5 * 60 * 1000) {
+    if (now - torrent.lastAccess > 5 * 60 * 1000) { // 5 دقائق
       console.log(`Removing idle torrent: "${torrent.name}"`);
       removeTorrent(hash);
     }
   });
 }, 60 * 1000);
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`);
 });
