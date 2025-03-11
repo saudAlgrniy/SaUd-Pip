@@ -9,7 +9,10 @@
   <!-- FontAwesome CSS -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
-    /* الأساسيات */
+    /* إعدادات عامة لضمان التناسق */
+    * {
+      box-sizing: border-box;
+    }
     body {
       margin: 0;
       padding: 20px;
@@ -19,11 +22,12 @@
       text-align: center;
     }
     .container {
+      width: 90%;
+      max-width: 700px;
       background: #fff;
       border: 1px solid #ddd;
       border-radius: 10px;
       padding: 30px;
-      max-width: 700px;
       margin: 20px auto;
       box-shadow: 0 4px 8px rgba(0,0,0,0.1);
     }
@@ -55,6 +59,279 @@
     button:hover {
       background: #f0f0f0;
       box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    /* شريط التحميل والعداد المئوي */
+    .progress-bar {
+      width: 100%;
+      background-color: #ddd;
+      border-radius: 5px;
+      overflow: hidden;
+      margin-top: 5px;
+      height: 15px; /* ارتفاع أصغر */
+      direction: ltr;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      background-color: #2ecc71;
+      width: 0%;
+      transition: width 0.5s ease-in-out;
+    }
+    /* عرض النص والنسبة معاً من اليسار */
+    .progress-header {
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      direction: ltr;
+      font-size: 1em;
+    }
+    .progress-header span {
+      margin-left: 5px; /* فجوة صغيرة */
+      font-weight: bold;
+    }
+    /* Loader (Hamster Animation) */
+    #loader {
+      display: none;
+      margin-top: 20px;
+    }
+    /* From Uiverse.io by Nawsome - Hamster CSS */
+    .wheel-and-hamster {
+      --dur: 1s;
+      position: relative;
+      width: 12em;
+      height: 12em;
+      font-size: 14px;
+      margin: 0 auto;
+    }
+    .wheel,
+    .hamster,
+    .hamster div,
+    .spoke {
+      position: absolute;
+    }
+    .wheel,
+    .spoke {
+      border-radius: 50%;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+    }
+    .wheel {
+      background: radial-gradient(100% 100% at center, hsla(0,0%,60%,0) 47.8%, hsl(0,0%,60%) 48%);
+      z-index: 2;
+    }
+    .hamster {
+      animation: hamster var(--dur) ease-in-out infinite;
+      top: 50%;
+      left: calc(50% - 3.5em);
+      width: 7em;
+      height: 3.75em;
+      transform: rotate(4deg) translate(-0.8em,1.85em);
+      transform-origin: 50% 0;
+      z-index: 1;
+    }
+    .hamster__head {
+      animation: hamsterHead var(--dur) ease-in-out infinite;
+      background: hsl(30,90%,55%);
+      border-radius: 70% 30% 0 100% / 40% 25% 25% 60%;
+      box-shadow: 0 -0.25em 0 hsl(30,90%,80%) inset, 0.75em -1.55em 0 hsl(30,90%,90%) inset;
+      top: 0;
+      left: -2em;
+      width: 2.75em;
+      height: 2.5em;
+      transform-origin: 100% 50%;
+    }
+    .hamster__ear {
+      animation: hamsterEar var(--dur) ease-in-out infinite;
+      background: hsl(0,90%,85%);
+      border-radius: 50%;
+      box-shadow: -0.25em 0 hsl(30,90%,55%) inset;
+      top: -0.25em;
+      right: -0.25em;
+      width: 0.75em;
+      height: 0.75em;
+      transform-origin: 50% 75%;
+    }
+    .hamster__eye {
+      animation: hamsterEye var(--dur) linear infinite;
+      background-color: hsl(0,0%,0%);
+      border-radius: 50%;
+      top: 0.375em;
+      left: 1.25em;
+      width: 0.5em;
+      height: 0.5em;
+    }
+    .hamster__nose {
+      background: hsl(0,90%,75%);
+      border-radius: 35% 65% 85% 15% / 70% 50% 50% 30%;
+      top: 0.75em;
+      left: 0;
+      width: 0.2em;
+      height: 0.25em;
+    }
+    .hamster__body {
+      animation: hamsterBody var(--dur) ease-in-out infinite;
+      background: hsl(30,90%,90%);
+      border-radius: 50% 30% 50% 30% / 15% 60% 40% 40%;
+      box-shadow: 0.1em 0.75em 0 hsl(30,90%,55%) inset, 0.15em -0.5em 0 hsl(30,90%,80%) inset;
+      top: 0.25em;
+      left: 2em;
+      width: 4.5em;
+      height: 3em;
+      transform-origin: 17% 50%;
+      transform-style: preserve-3d;
+    }
+    .hamster__limb--fr,
+    .hamster__limb--fl {
+      clip-path: polygon(0 0, 100% 0, 70% 80%, 60% 100%, 0% 100%, 40% 80%);
+      top: 2em;
+      left: 0.5em;
+      width: 1em;
+      height: 1.5em;
+      transform-origin: 50% 0;
+    }
+    .hamster__limb--fr {
+      animation: hamsterFRLimb var(--dur) linear infinite;
+      background: linear-gradient(hsl(30,90%,80%) 80%, hsl(0,90%,75%) 80%);
+      transform: rotate(15deg) translateZ(-1px);
+    }
+    .hamster__limb--fl {
+      animation: hamsterFLLimb var(--dur) linear infinite;
+      background: linear-gradient(hsl(30,90%,90%) 80%, hsl(0,90%,85%) 80%);
+      transform: rotate(15deg);
+    }
+    .hamster__limb--br,
+    .hamster__limb--bl {
+      border-radius: 0.75em 0.75em 0 0;
+      clip-path: polygon(0 0, 100% 0, 100% 30%, 70% 90%, 70% 100%, 30% 100%, 40% 90%, 0 30%);
+      top: 1em;
+      left: 2.8em;
+      width: 1.5em;
+      height: 2.5em;
+      transform-origin: 50% 30%;
+    }
+    .hamster__limb--br {
+      animation: hamsterBRLimb var(--dur) linear infinite;
+      background: linear-gradient(hsl(30,90%,80%) 90%, hsl(0,90%,75%) 90%);
+      transform: rotate(-25deg) translateZ(-1px);
+    }
+    .hamster__limb--bl {
+      animation: hamsterBLLimb var(--dur) linear infinite;
+      background: linear-gradient(hsl(30,90%,90%) 90%, hsl(0,90%,85%) 90%);
+      transform: rotate(-25deg);
+    }
+    .hamster__tail {
+      animation: hamsterTail var(--dur) linear infinite;
+      background: hsl(0,90%,85%);
+      border-radius: 0.25em 50% 50% 0.25em;
+      box-shadow: 0 -0.2em 0 hsl(0,90%,75%) inset;
+      top: 1.5em;
+      right: -0.5em;
+      width: 1em;
+      height: 0.5em;
+      transform: rotate(30deg) translateZ(-1px);
+      transform-origin: 0.25em 0.25em;
+    }
+    .spoke {
+      animation: spoke var(--dur) linear infinite;
+      background: radial-gradient(100% 100% at center, hsl(0,0%,60%) 4.8%, hsla(0,0%,60%,0) 5%),
+                  linear-gradient(hsla(0,0%,55%,0) 46.9%, hsl(0,0%,65%) 47% 52.9%, hsla(0,0%,65%,0) 53%) 50% 50% / 99% 99% no-repeat;
+    }
+    @keyframes hamster {
+      from, to {
+        transform: rotate(4deg) translate(-0.8em,1.85em);
+      }
+      50% {
+        transform: rotate(0) translate(-0.8em,1.85em);
+      }
+    }
+    @keyframes hamsterHead {
+      from, 25%, 50%, 75%, to {
+        transform: rotate(0);
+      }
+      12.5%, 37.5%, 62.5%, 87.5% {
+        transform: rotate(8deg);
+      }
+    }
+    @keyframes hamsterEye {
+      from, 90%, to {
+        transform: scaleY(1);
+      }
+      95% {
+        transform: scaleY(0);
+      }
+    }
+    @keyframes hamsterEar {
+      from, 25%, 50%, 75%, to {
+        transform: rotate(0);
+      }
+      12.5%, 37.5%, 62.5%, 87.5% {
+        transform: rotate(12deg);
+      }
+    }
+    @keyframes hamsterBody {
+      from, 25%, 50%, 75%, to {
+        transform: rotate(0);
+      }
+      12.5%, 37.5%, 62.5%, 87.5% {
+        transform: rotate(-2deg);
+      }
+    }
+    @keyframes hamsterFRLimb {
+      from, 25%, 50%, 75%, to {
+        transform: rotate(50deg) translateZ(-1px);
+      }
+      12.5%, 37.5%, 62.5%, 87.5% {
+        transform: rotate(-30deg) translateZ(-1px);
+      }
+    }
+    @keyframes hamsterFLLimb {
+      from, 25%, 50%, 75%, to {
+        transform: rotate(-30deg);
+      }
+      12.5%, 37.5%, 62.5%, 87.5% {
+        transform: rotate(50deg);
+      }
+    }
+    @keyframes hamsterBRLimb {
+      from, 25%, 50%, 75%, to {
+        transform: rotate(-60deg) translateZ(-1px);
+      }
+      12.5%, 37.5%, 62.5%, 87.5% {
+        transform: rotate(20deg) translateZ(-1px);
+      }
+    }
+    @keyframes hamsterBLLimb {
+      from, 25%, 50%, 75%, to {
+        transform: rotate(20deg);
+      }
+      12.5%, 37.5%, 62.5%, 87.5% {
+        transform: rotate(-60deg);
+      }
+    }
+    @keyframes hamsterTail {
+      from, 25%, 50%, 75%, to {
+        transform: rotate(30deg) translateZ(-1px);
+      }
+      12.5%, 37.5%, 62.5%, 87.5% {
+        transform: rotate(10deg) translateZ(-1px);
+      }
+    }
+    @keyframes spoke {
+      from {
+        transform: rotate(0);
+      }
+      to {
+        transform: rotate(-1turn);
+      }
+    }
+    /* عداد Peers بأسلوب CMD */
+    .peer-counter {
+      text-align: center;
+      font-family: 'Courier New', Courier, monospace;
+      color: #00aa00;
+      margin-top: 10px;
+      font-size: 1.2em;
     }
     /* مشغل الفيديو */
     #videoContainer {
@@ -89,6 +366,10 @@
       margin: 5px 0;
       font-size: 0.95em;
     }
+    /* Download Progress Container with header */
+    #torrentProgressContainer {
+      margin-top: 10px;
+    }
     /* اختيار الفيديو */
     #videoSelection {
       margin-top: 10px;
@@ -101,12 +382,11 @@
       border-radius: 5px;
       background: #fff;
     }
-    /* تنسيق المجلدات والملفات */
+    /* ملفات التورنت */
     #torrentFiles {
       margin-top: 20px;
       text-align: left;
     }
-    /* لضمان عرض العناصر من اليسار */
     .folder-group,
     .folder-header,
     .files-list,
@@ -140,7 +420,7 @@
       color: #f39c12;
     }
     .files-list {
-      display: none; /* يبدأ المجلد مغلقًا */
+      display: none;
     }
     .file-item {
       display: flex;
@@ -215,6 +495,33 @@
       cursor: pointer;
       box-shadow: 0 2px 5px rgba(0,0,0,0.3);
     }
+    /* أزرار التحكم في التورنت */
+    .control-buttons {
+      display: flex;
+      justify-content: center;
+      margin-top: 10px;
+    }
+    .control-buttons button {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 10px 15px;
+      margin: 0 5px;
+      border-radius: 5px;
+      color: white;
+      font-weight: bold;
+      font-size: 1em;
+      cursor: pointer;
+    }
+    .control-buttons button i {
+      margin-right: 0;
+    }
+    #copyLinkButton {
+      background-color: #3498db;
+    }
+    #removeButton {
+      background-color: #e74c3c;
+    }
   </style>
 </head>
 <body>
@@ -224,38 +531,80 @@
     <button onclick="startStreaming()">Stream Video</button>
     <div id="errorMessage"></div>
 
-    <!-- منطقة عرض الفيديو -->
+    <!-- Loader with Hamster Animation -->
+    <div id="loader">
+      <!-- From Uiverse.io by Nawsome -->
+      <div class="wheel-and-hamster">
+        <div class="wheel"></div>
+        <div class="hamster">
+          <div class="hamster__body">
+            <div class="hamster__head">
+              <div class="hamster__ear"></div>
+              <div class="hamster__eye"></div>
+              <div class="hamster__nose"></div>
+            </div>
+            <div class="hamster__limb hamster__limb--fr"></div>
+            <div class="hamster__limb hamster__limb--fl"></div>
+            <div class="hamster__limb hamster__limb--br"></div>
+            <div class="hamster__limb hamster__limb--bl"></div>
+            <div class="hamster__tail"></div>
+          </div>
+        </div>
+        <div class="spoke"></div>
+      </div>
+      <!-- عداد Peers بأسلوب CMD -->
+      <div id="peerCounter" class="peer-counter">
+        Peers: <span id="peerCount">0</span>
+      </div>
+    </div>
+
+    <!-- Video Player Container -->
     <div id="videoContainer">
       <h3>: Video</h3>
       <video id="videoPlayer" controls crossorigin playsinline>
         <source src="" type="video/mp4">
         <p>Please enable JavaScript or upgrade your browser to support HTML5 video.</p>
       </video>
-      <button id="copyLinkButton" onclick="copyLink()">Copy Stream Link</button>
+      <div class="control-buttons">
+        <button id="copyLinkButton" onclick="copyLink()" title="Copy Stream Link">
+          <i class="fa-solid fa-copy"></i>
+        </button>
+        <button id="removeButton" onclick="removeTorrent()" title="Remove Torrent">
+          <i class="fa-solid fa-trash"></i>
+        </button>
+      </div>
     </div>
 
-    <!-- قائمة اختيار الفيديو في حال وجود أكثر من ملف فيديو -->
+    <!-- Video Selection (if multiple videos available) -->
     <div id="videoSelection">
       <label for="videoSelect">Choose video :</label>
       <select id="videoSelect" onchange="changeVideo()"></select>
     </div>
 
-    <!-- تفاصيل التورنت -->
+    <!-- Torrent Details -->
     <div id="torrentDetails">
       <h3>: Torrent Details</h3>
       <p id="torrentName"></p>
       <p id="torrentAccessCount"></p>
       <p id="torrentPeers"></p>
-      <p id="torrentSeeders"></p>
-      <p id="torrentLeechers"></p>
+      <!-- Download Progress with header showing text and percentage on the same line -->
+      <div id="torrentProgressContainer">
+        <div class="progress-header">
+          <strong>Download Progress:</strong>
+          <span id="progressPercent">0%</span>
+        </div>
+        <div id="torrentProgressBar" class="progress-bar">
+          <div class="progress-bar-fill"></div>
+        </div>
+      </div>
       <div id="torrentFiles"></div>
     </div>
   </div>
 
-  <!-- نافذة منبثقة لعرض الصورة -->
+  <!-- Image Modal -->
   <div id="imageModal">
     <div class="modal-content">
-      <span class="modal-close" onclick="closeImageModal()">&times;</span>
+      <span class="modal-close" onclick="closeImageModal()">×</span>
       <img src="" alt="Preview">
     </div>
   </div>
@@ -266,25 +615,42 @@
     const player = new Plyr('#videoPlayer');
     let currentMagnetLink = '';
     let currentFileIndex = '0';
-    // متغير لتخزين حالة المجلدات
     let openFolders = {};
+    let autoUpdateInterval;
+    let peerCounterInterval; // متغير لعداد Peers
+
+    // متغيرات للعداد التراكمي
+    let currentPeerCounter = 0;
+    let actualPeerCount = 0;
+
+    // دالة لتحويل البايت إلى صيغة مقروءة (GB, MB, KB)
+    function formatBytes(bytes) {
+      if (bytes < 1024) return bytes + " bytes";
+      else if (bytes < 1048576) return (bytes / 1024).toFixed(2) + " KB";
+      else if (bytes < 1073741824) return (bytes / 1048576).toFixed(2) + " MB";
+      else return (bytes / 1073741824).toFixed(2) + " GB";
+    }
 
     function startStreaming() {
       const magnetLink = document.getElementById('magnetLink').value.trim();
-      const videoContainer = document.getElementById('videoContainer');
       const errorMessage = document.getElementById('errorMessage');
+      const loader = document.getElementById('loader');
+      const videoContainer = document.getElementById('videoContainer');
+      const torrentDetails = document.getElementById('torrentDetails');
 
       if (!magnetLink) {
         errorMessage.textContent = '⚠️ Please enter a Magnet link!';
+        loader.style.display = 'none';
         videoContainer.style.display = 'none';
+        torrentDetails.style.display = 'none';
         return;
       }
 
       errorMessage.textContent = '';
       currentMagnetLink = magnetLink;
       currentFileIndex = '0';
-      
-      // تحديث مصدر الفيديو باستخدام Plyr
+
+      // ضبط مصدر الفيديو فوراً
       const videoSrc = `/stream?magnet=${encodeURIComponent(magnetLink)}&fileIndex=0`;
       player.source = {
         type: 'video',
@@ -293,11 +659,34 @@
           type: 'video/mp4'
         }]
       };
-      videoContainer.style.display = 'block';
 
-      // جلب وتحديث تفاصيل التورنت
+      // عرض الـ loader وإخفاء مشغل الفيديو والتفاصيل
+      loader.style.display = 'block';
+      videoContainer.style.display = 'none';
+      torrentDetails.style.display = 'none';
+
+      // بدء عداد Peers من 0 مع تحديث كل 0.1 ثانية حتى يصل للقيمة الفعلية
+      currentPeerCounter = 0;
+      document.getElementById("peerCount").textContent = currentPeerCounter;
+      if (peerCounterInterval) clearInterval(peerCounterInterval);
+      peerCounterInterval = setInterval(() => {
+          if (currentPeerCounter < actualPeerCount) {
+              currentPeerCounter++;
+              document.getElementById("peerCount").textContent = currentPeerCounter;
+          }
+      }, 100);
+
+      // بدء جلب البيانات والتحديث التلقائي فوراً
       fetchTorrentDetails(magnetLink);
       startAutoUpdate();
+
+      // بعد 10 ثوانٍ إخفاء الـ loader وعرض مشغل الفيديو والتفاصيل، وإيقاف العداد
+      setTimeout(() => {
+         loader.style.display = 'none';
+         videoContainer.style.display = 'block';
+         torrentDetails.style.display = 'block';
+         clearInterval(peerCounterInterval);
+      }, 10000);
     }
 
     function copyLink() {
@@ -309,10 +698,10 @@
         navigator.clipboard.writeText(`http://localhost:3000${url}`)
           .then(() => {
             const copyButton = document.getElementById('copyLinkButton');
-            const originalText = "Copy Stream Link";
-            copyButton.innerHTML = '✔️ Copied';
+            const originalHTML = '<i class="fa-solid fa-copy"></i>';
+            copyButton.innerHTML = '<i class="fa-solid fa-check"></i>';
             setTimeout(() => {
-              copyButton.innerHTML = originalText;
+              copyButton.innerHTML = originalHTML;
             }, 2000);
           })
           .catch(err => {
@@ -346,41 +735,50 @@
             console.error(data.error);
             return;
           }
-          document.getElementById('torrentDetails').style.display = 'block';
+          // تحديث تفاصيل التورنت
           document.getElementById('torrentName').textContent = `Torrent Name: ${data.name}`;
           document.getElementById('torrentAccessCount').textContent = `Listeners: ${data.accessCount}`;
           document.getElementById('torrentPeers').textContent = `Peers: ${data.numPeers}`;
-          document.getElementById('torrentSeeders').textContent = `Seeders: ${data.seeds}`;
-          document.getElementById('torrentLeechers').textContent = `Leechers: ${data.leechers}`;
+          // تحديث قيمة العدّاد الفعلية من بيانات التورنت
+          actualPeerCount = parseInt(data.numPeers) || 0;
+          
+          // تحديث شريط تحميل Download Progress والعداد المئوي
+          const progressPercent = (data.progress * 100).toFixed(2) + '%';
+          document.querySelector('#torrentProgressBar .progress-bar-fill').style.width = progressPercent;
+          document.getElementById("progressPercent").textContent = progressPercent;
 
-          // تحديث قائمة اختيار الفيديو إذا وُجد أكثر من ملف فيديو
-          const videoSelect = document.getElementById('videoSelect');
-          const videoFiles = data.files.filter(f => {
-            const lower = f.name.toLowerCase();
-            return lower.endsWith('.mp4') || lower.endsWith('.mkv');
-          });
-          if (videoFiles.length > 1) {
-            const currentSelection = videoSelect.value;
-            videoSelect.innerHTML = '';
-            videoFiles.forEach(file => {
-              const option = document.createElement('option');
-              option.value = file.index;
-              option.textContent = '🎥 ' + file.name;
-              videoSelect.appendChild(option);
-            });
-            if (currentSelection && [...videoSelect.options].some(o => o.value === currentSelection)) {
-              videoSelect.value = currentSelection;
-              currentFileIndex = currentSelection;
-            } else {
-              videoSelect.value = videoSelect.options[0].value;
-              currentFileIndex = videoSelect.options[0].value;
-            }
-            document.getElementById('videoSelection').style.display = 'block';
-          } else {
+          // تحديث خيارات الفيديو (فقط إذا لم يكن الـ loader ظاهرًا)
+          const loader = document.getElementById('loader');
+          if (loader.style.display !== 'none') {
             document.getElementById('videoSelection').style.display = 'none';
+          } else {
+            const videoSelect = document.getElementById('videoSelect');
+            const videoFiles = data.files.filter(f => {
+              const lower = f.name.toLowerCase();
+              return lower.endsWith('.mp4') || lower.endsWith('.mkv');
+            });
+            if (videoFiles.length > 1) {
+              const currentSelection = videoSelect.value;
+              videoSelect.innerHTML = '';
+              videoFiles.forEach(file => {
+                const option = document.createElement('option');
+                option.value = file.index;
+                option.textContent = '🎥 ' + file.name;
+                videoSelect.appendChild(option);
+              });
+              if (currentSelection && [...videoSelect.options].some(o => o.value === currentSelection)) {
+                videoSelect.value = currentSelection;
+                currentFileIndex = currentSelection;
+              } else {
+                videoSelect.value = videoSelect.options[0].value;
+                currentFileIndex = videoSelect.options[0].value;
+              }
+              document.getElementById('videoSelection').style.display = 'block';
+            } else {
+              document.getElementById('videoSelection').style.display = 'none';
+            }
           }
 
-          // تنظيم الملفات ضمن مجلدات (مع إضافة مجموعة لـ txt)
           const torrentFilesElement = document.getElementById('torrentFiles');
           torrentFilesElement.innerHTML = '<strong>: Torrent Files</strong>';
           const groups = {
@@ -406,7 +804,6 @@
             }
           });
 
-          // دالة لإنشاء عنصر ملف بناءً على نوعه
           function createFileItem(file, groupType) {
             let iconClass = '';
             let iconColor = '';
@@ -440,12 +837,11 @@
             const fileName = document.createElement('p');
             fileName.textContent = file.name;
             const fileSize = document.createElement('span');
-            fileSize.textContent = `(${file.length} bytes)`;
+            fileSize.textContent = `(${formatBytes(file.length)})`;
             infoDiv.appendChild(fileName);
             infoDiv.appendChild(fileSize);
             fileItem.appendChild(infoDiv);
 
-            // إذا كان الملف من نوع صورة، إضافة حدث لعرضها
             if (groupType === 'images') {
               fileItem.style.cursor = 'pointer';
               fileItem.addEventListener('click', () => openImageModal(file));
@@ -453,7 +849,6 @@
             return fileItem;
           }
 
-          // دالة إنشاء مجموعة مجلد مع تبديل الحالة (فتح/إغلاق) عند النقر على الرأس
           function createFolderGroup(title, groupType, filesArray) {
             if (filesArray.length === 0) return null;
             const groupDiv = document.createElement('div');
@@ -463,7 +858,6 @@
             header.className = 'folder-header';
 
             const folderIcon = document.createElement('i');
-            // تعيين الرمز بناءً على حالة المجلد المخزنة
             folderIcon.className = openFolders[title] ? 'fa-solid fa-folder-open' : 'fa-solid fa-folder';
             header.appendChild(folderIcon);
 
@@ -475,7 +869,6 @@
 
             const filesList = document.createElement('div');
             filesList.className = 'files-list';
-            // تعيين طريقة العرض بناءً على الحالة المخزنة
             filesList.style.display = openFolders[title] ? 'block' : 'none';
             filesArray.forEach(file => {
               const fileItem = createFileItem(file, groupType);
@@ -483,7 +876,6 @@
             });
             groupDiv.appendChild(filesList);
 
-            // عند النقر على الرأس، يتم تبديل حالة العرض وتحديث الكائن openFolders
             header.addEventListener('click', () => {
               if (filesList.style.display === 'none') {
                 filesList.style.display = 'block';
@@ -499,7 +891,6 @@
             return groupDiv;
           }
 
-          // إنشاء وعرض المجلدات حسب نوع الملفات
           const groupsOrder = [
             { title: 'Videos', type: 'videos', files: groups.videos },
             { title: 'Images', type: 'images', files: groups.images },
@@ -518,7 +909,6 @@
         .catch(err => console.error('Error fetching torrent details:', err));
     }
 
-    let autoUpdateInterval;
     function startAutoUpdate() {
       if (autoUpdateInterval) clearInterval(autoUpdateInterval);
       autoUpdateInterval = setInterval(() => {
@@ -528,21 +918,40 @@
       }, 1000);
     }
 
-    // دوال عرض الصورة في النافذة المنبثقة
     function openImageModal(file) {
       const imageURL = `/stream?magnet=${encodeURIComponent(currentMagnetLink)}&fileIndex=${file.index}`;
       const modal = document.getElementById('imageModal');
       modal.querySelector('img').src = imageURL;
       modal.style.display = 'block';
     }
+
     function closeImageModal() {
       document.getElementById('imageModal').style.display = 'none';
     }
-    // إغلاق النافذة عند النقر خارج المحتوى
+
     window.onclick = function(event) {
       const modal = document.getElementById('imageModal');
       if (event.target === modal) {
         modal.style.display = 'none';
+      }
+    }
+
+    // تعديل وظيفة الإزالة: عند الضغط يتم إخفاء كل العناصر (الفيديو وتفاصيل التورنت) وتحديث الصفحة فورًا
+    function removeTorrent() {
+      if (currentMagnetLink) {
+        fetch(`/torrent/remove?magnet=${encodeURIComponent(currentMagnetLink)}`)
+          .then(response => response.json())
+          .then(data => {
+            // إخفاء جميع العناصر فورًا
+            document.getElementById('torrentDetails').style.display = 'none';
+            document.getElementById('videoContainer').style.display = 'none';
+            clearInterval(autoUpdateInterval);
+            // تحديث الصفحة فورًا
+            location.reload(true);
+          })
+          .catch(err => console.error('Error removing torrent:', err));
+      } else {
+        console.error('No torrent is currently streaming');
       }
     }
   </script>
