@@ -18,6 +18,7 @@
     "mediainfo.js": "^0.3.4",
     "music-metadata": "^11.0.0",
     "webtorrent-hybrid": "^5.0.2",
-    "wrtc": "^0.4.7"
+    "wrtc": "^0.4.7",
+    "node-pre-gyp": "^1.0.10"
   }
 }
