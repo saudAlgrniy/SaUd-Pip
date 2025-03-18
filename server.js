@@ -27,7 +27,12 @@ function logMessage(type, message) {
 }
 
 const app = express();
-const client = new WebTorrent();
+// تحديد منفذ ثابت وتعطيل DHT لتقليل عدد المنافذ المفتوحة
+const client = new WebTorrent({
+  torrentPort: process.env.TORRENT_PORT || 6881,
+  dht: false
+});
+
 const activeTorrents = new Map();
 const torrentAccessCount = new Map();
 
