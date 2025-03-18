@@ -19,6 +19,7 @@
     "http-proxy": "^1.18.1",
     "magnet-uri": "^7.0.7",
     "mediainfo.js": "^0.3.4",
-    "music-metadata": "^11.0.0"
+    "music-metadata": "^11.0.0",
+    "webtorrent": "^2.5.19"
   }
 }
