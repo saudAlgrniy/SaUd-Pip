@@ -27,7 +27,9 @@ function logMessage(type, message) {
 }
 
 const app = express();
-// تحديد منفذ ثابت وتعطيل DHT لتقليل عدد المنافذ المفتوحة
+
+// إنشاء عميل WebTorrent مع تحديد منفذ ثابت (من خلال متغير البيئة TORRENT_PORT أو القيمة الافتراضية 6881)
+// وتعطيل DHT لتقليل عدد المنافذ المفتوحة
 const client = new WebTorrent({
   torrentPort: process.env.TORRENT_PORT || 6881,
   dht: false
@@ -171,9 +173,7 @@ const removeTorrent = (torrentHash) => {
       } else {
         activeTorrents.delete(torrentHash);
         torrentAccessCount.delete(torrentHash);
-        // مسح الشاشة أولاً
         console.clear();
-        // عرض رسائل الإغلاق بتنسيق ملون مختلف
         logMessage("warn", `Closed torrent: "${torrent.name}"`);
         const downloadPath = path.join('downloads', torrentHash);
         fs.rm(downloadPath, { recursive: true, force: true }, (err) => {
@@ -182,7 +182,6 @@ const removeTorrent = (torrentHash) => {
           } else {
             logMessage("debug", `Removed download folder: "${downloadPath}"`);
           }
-          // بعد عرض الرسائل لمدة قصيرة نقوم بمسح شاشة الـ cmd لإزالة الرسائل
           setTimeout(() => {
             console.clear();
           }, 2000);
@@ -371,6 +370,7 @@ app.get('/torrent/remove', (req, res) => {
   return res.json({ message: 'Torrent removed successfully.' });
 });
 
+// استخدام متغير البيئة للمنفذ؛ Render ستحدد المنفذ من خلال process.env.PORT
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   logMessage("info", `Server running on http://localhost:${PORT}`);
