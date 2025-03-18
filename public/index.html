@@ -1004,7 +1004,7 @@
   </div>
   <!-- Plyr JS -->
   <script src="https://cdn.plyr.io/3.7.2/plyr.polyfilled.js"></script>
-  <script>
+ <script>
     const player = new Plyr('#videoPlayer');
     let currentMagnetLink = '';
     let currentFileIndex = '0';
@@ -1037,7 +1037,6 @@
         return;
       }
       
-      // التحقق من أن الرابط يبدأ بـ "magnet:"
       if (!magnetLink.startsWith("magnet:")) {
         errorMessage.textContent = '⚠️ الرجاء ادخال رابط Magnet صالح!';
         errorMessage.style.display = 'block';
@@ -1061,7 +1060,6 @@
         sources: [{ src: videoSrc, type: 'video/mp4' }]
       };
 
-      // عرض اللودر مع تأثير التلاشي
       loader.style.display = 'flex';
       setTimeout(() => {
         loader.style.opacity = '1';
@@ -1102,7 +1100,6 @@
         if (videoSelect.options.length > 1) {
           document.getElementById('videoSelection').style.display = 'block';
         }
-        // إعادة تمكين التمرير عند ظهور المحتوى الرئيسي
         document.body.classList.remove('no-scroll');
         clearInterval(peerCounterInterval);
       }, 10000);
@@ -1114,8 +1111,8 @@
         if (currentFileIndex !== "0") {
           url += `&fileIndex=${currentFileIndex}`;
         }
-        // تعديل الرابط ليستخدم IP الجهاز بدلاً من "localhost"
-        const fullURL = `http://${window.location.hostname}:${3000}${url}`;
+        // استخدام window.location.origin لضمان تطابق الرابط مع بيئة النشر على Render
+        const fullURL = `${window.location.origin}${url}`;
         if (navigator.clipboard && navigator.clipboard.writeText) {
           navigator.clipboard.writeText(fullURL)
             .then(() => {
