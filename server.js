@@ -6,9 +6,10 @@ import { EventEmitter } from 'events';
 import fs from 'fs';
 import path from 'path';
 
+// ضبط الحد الأقصى للمستمعين مع ضرورة مراقبة تسرب الأحداث
 EventEmitter.defaultMaxListeners = 100;
 
-// دالة مساعدة لتنسيق الرسائل في الـ cmd مع ألوان مختلفة
+// دالة تسجيل رسائل محسّنة مع ألوان
 function logMessage(type, message) {
   const colors = {
     info: "\x1b[32m",   // أخضر للمعلومات
@@ -18,18 +19,23 @@ function logMessage(type, message) {
   };
   const color = colors[type] || "";
   const reset = "\x1b[0m";
-  // تعطيل التفاف السطر
-  process.stdout.write("\x1b[?7l");
-  // طباعة الرسالة مع سطر فارغ قبل وبعدها
+  process.stdout.write("\x1b[?7l"); // تعطيل التفاف السطر
   console.log(`\n${color}${message}${reset}\n`);
-  // إعادة تفعيل التفاف السطر
-  process.stdout.write("\x1b[?7h");
+  process.stdout.write("\x1b[?7h"); // إعادة تفعيل التفاف السطر
+}
+
+// دالة مساعدة لتحليل رابط الماجنت والتحقق منه
+function getParsedMagnet(magnet) {
+  try {
+    return magnetUri(magnet);
+  } catch (error) {
+    throw new Error(`Invalid Magnet link: ${error.message}`);
+  }
 }
 
 const app = express();
 
-// إنشاء عميل WebTorrent مع تحديد منفذ ثابت (من خلال متغير البيئة TORRENT_PORT أو القيمة الافتراضية 6881)
-// وتعطيل DHT لتقليل عدد المنافذ المفتوحة
+// إنشاء عميل WebTorrent مع إعدادات محسّنة
 const client = new WebTorrent({
   torrentPort: process.env.TORRENT_PORT || 6881,
   dht: false
@@ -45,22 +51,22 @@ app.use(express.static('public', {
   etag: false
 }));
 
+// دالة لاستخراج نوع المحتوى بناءً على امتداد الملف
 const getMimeType = (filename) => {
   if (filename.endsWith('.mp4')) return 'video/mp4';
   if (filename.endsWith('.mkv')) return 'video/x-matroska';
   return 'application/octet-stream';
 };
 
+// دالة محسّنة لتحليل نطاق الطلب مع تحقق إضافي
 function parseRange(range, fileSize) {
   if (!range) return { start: 0, end: fileSize - 1 };
-
   const parts = range.replace(/bytes=/, '').trim().split('-');
   let start = parseInt(parts[0], 10);
   let end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
-
+  
   if (isNaN(start) || start < 0) start = 0;
   if (isNaN(end) || end >= fileSize) end = fileSize - 1;
-
   if (start > end) {
     logMessage("warn", 'Invalid range: start is greater than end. Streaming full file.');
     start = 0;
@@ -69,6 +75,7 @@ function parseRange(range, fileSize) {
   return { start, end };
 }
 
+// دالة إرسال الدفق مع معالجة الأخطاء والتأكد من إغلاق التدفقات القديمة
 const sendStream = (torrent, file, range, res, customRange = null) => {
   let startByte = 0;
   let endByte = file.length - 1;
@@ -89,7 +96,7 @@ const sendStream = (torrent, file, range, res, customRange = null) => {
       res.set('Content-Range', `bytes ${startByte}-${endByte}/${file.length}`);
       res.set('Accept-Ranges', 'bytes');
     } catch (err) {
-      logMessage("error", `Error parsing range: ${err}`);
+      logMessage("error", `Error parsing range: ${err.message}`);
       return res.status(416).send('Requested Range Not Satisfiable');
     }
   }
@@ -97,6 +104,7 @@ const sendStream = (torrent, file, range, res, customRange = null) => {
   res.set('Content-Type', getMimeType(file.name));
   res.status(statusCode);
 
+  // إغلاق أي تدفق سابق مفتوح لهذا التورنت
   if (torrent._currentReadStream) {
     torrent._currentReadStream.destroy();
   }
@@ -105,29 +113,31 @@ const sendStream = (torrent, file, range, res, customRange = null) => {
   torrent._currentReadStream = readStream;
   pipeline(readStream, res, (err) => {
     if (err && err.code !== 'ERR_STREAM_PREMATURE_CLOSE') {
-      logMessage("error", `Stream error: ${err}`);
+      logMessage("error", `Stream error: ${err.message}`);
     }
     torrent._currentReadStream = null;
   });
 };
 
+// دالة معالجة التورنت مع تحسين اختيار الملف ونطاق الدفق
 const handleTorrent = (torrent, range, res, fileIndex = 0, startMinute = null, endMinute = null) => {
   torrent.lastAccess = Date.now();
 
+  // اختيار ملفات الفيديو فقط مع دعم mp4 و mkv
   const videoFiles = torrent.files.filter(f => f.name.endsWith('.mp4') || f.name.endsWith('.mkv'));
   if (videoFiles.length === 0) {
     return res.status(404).send('No MP4 or MKV video found in this torrent.');
   }
-  if (fileIndex < 0 || fileIndex >= videoFiles.length) {
+  fileIndex = parseInt(fileIndex, 10);
+  if (isNaN(fileIndex) || fileIndex < 0 || fileIndex >= videoFiles.length) {
     return res.status(400).send('Invalid fileIndex parameter.');
   }
   const selectedFile = videoFiles[fileIndex];
 
-  // في حال وجود أكثر من ملف فيديو، يتم تحديد الملف المطلوب وتحميله فقط
+  // في حال وجود أكثر من ملف فيديو، تحديد الملف المطلوب فقط لتحميله
   if (videoFiles.length > 1) {
     const totalPieces = Math.ceil(torrent.length / torrent.pieceLength);
     torrent.deselect(0, totalPieces - 1, 0);
-
     torrent.files.forEach(file => {
       const startPiece = Math.floor(file.offset / torrent.pieceLength);
       const endPiece = Math.ceil((file.offset + file.length) / torrent.pieceLength) - 1;
@@ -145,6 +155,7 @@ const handleTorrent = (torrent, range, res, fileIndex = 0, startMinute = null, e
     torrent._lastFileIndex = fileIndex;
   }
 
+  // تحسين معالجة نطاق الدقائق مع تحقق من القيم
   let customRange = null;
   if (startMinute !== null) {
     const startMin = parseFloat(startMinute);
@@ -152,6 +163,7 @@ const handleTorrent = (torrent, range, res, fileIndex = 0, startMinute = null, e
     if (endMin !== null && startMin > endMin) {
       return res.status(416).send('Invalid minute range: startMinute is greater than endMinute');
     }
+    // لاحظ: القيمة الثابتة (7200 ثانية) تستخدم افتراض مدة الفيديو؛ يمكن تحسينها عبر استخراج بيانات الميديا
     const DEFAULT_VIDEO_DURATION = 7200;
     const startTimeSec = startMin * 60;
     const endTimeSec = endMin ? endMin * 60 : DEFAULT_VIDEO_DURATION;
@@ -164,43 +176,42 @@ const handleTorrent = (torrent, range, res, fileIndex = 0, startMinute = null, e
   sendStream(torrent, selectedFile, range, res, customRange);
 };
 
+// دالة إزالة التورنت مع تحسين التعامل مع حذف الملفات وإدارة الموارد
 const removeTorrent = (torrentHash) => {
   if (activeTorrents.has(torrentHash)) {
     const torrent = activeTorrents.get(torrentHash);
     client.remove(torrentHash, (err) => {
       if (err) {
-        logMessage("error", `Error removing torrent: ${err}`);
+        logMessage("error", `Error removing torrent: ${err.message}`);
       } else {
         activeTorrents.delete(torrentHash);
         torrentAccessCount.delete(torrentHash);
-        console.clear();
         logMessage("warn", `Closed torrent: "${torrent.name}"`);
         const downloadPath = path.join('downloads', torrentHash);
         fs.rm(downloadPath, { recursive: true, force: true }, (err) => {
           if (err) {
-            logMessage("error", `Error removing download folder for torrent "${torrent.name}": ${err}`);
+            logMessage("error", `Error removing download folder for torrent "${torrent.name}": ${err.message}`);
           } else {
             logMessage("debug", `Removed download folder: "${downloadPath}"`);
           }
-          setTimeout(() => {
-            console.clear();
-          }, 2000);
         });
       }
     });
   }
 };
 
+// دالة إضافة تورنت في حال عدم وجوده مع إزالة التورنتات القديمة
 const addTorrentIfNotExist = (magnetLink, res, range, fileIndex = 0, startMinute = null, endMinute = null) => {
   let parsedMagnet;
   try {
-    parsedMagnet = magnetUri(magnetLink);
+    parsedMagnet = getParsedMagnet(magnetLink);
   } catch (error) {
-    logMessage("error", `Error parsing magnet URI: ${error}`);
-    return res.status(400).send('Invalid Magnet link.');
+    logMessage("error", error.message);
+    return res.status(400).send(error.message);
   }
   const torrentHash = parsedMagnet.infoHash;
 
+  // إزالة أي تورنت غير الذي سيتم تشغيله حاليًا
   activeTorrents.forEach((torrent, key) => {
     if (key !== torrentHash) {
       removeTorrent(key);
@@ -218,14 +229,15 @@ const addTorrentIfNotExist = (magnetLink, res, range, fileIndex = 0, startMinute
       logMessage("info", `Resuming streaming torrent: "${torrent.name}"`);
       torrent._loggedResumed = true;
     }
-    handleTorrent(torrent, range, res, parseInt(fileIndex, 10), startMinute, endMinute);
+    handleTorrent(torrent, range, res, fileIndex, startMinute, endMinute);
   } else {
     logMessage("info", 'Adding new torrent...');
     client.add(magnetLink, { path: path.join('downloads', torrentHash) }, (torrent) => {
+      // إزالة كافة المستمعين السابقين لمنع تسرب الأحداث
       torrent.removeAllListeners();
       torrent.setMaxListeners(100);
       torrent.on('error', (err) => {
-        logMessage("error", `Torrent error: ${err}`);
+        logMessage("error", `Torrent error: ${err.message}`);
         if (!res.headersSent) {
           res.status(500).send('An error occurred while processing the torrent.');
         }
@@ -233,11 +245,12 @@ const addTorrentIfNotExist = (magnetLink, res, range, fileIndex = 0, startMinute
       torrent.lastAccess = Date.now();
       activeTorrents.set(torrentHash, torrent);
       logMessage("info", `Started streaming torrent: "${torrent.name}"`);
-      handleTorrent(torrent, range, res, parseInt(fileIndex, 10), startMinute, endMinute);
+      handleTorrent(torrent, range, res, fileIndex, startMinute, endMinute);
     });
   }
 };
 
+// نقطة النهاية لبث الفيديو باستخدام رابط الماجنت
 app.get('/stream', (req, res) => {
   const magnet = req.query.magnet;
   const fileIndex = req.query.fileIndex || 0;
@@ -250,6 +263,7 @@ app.get('/stream', (req, res) => {
   addTorrentIfNotExist(magnet, res, range, fileIndex, startMinute, endMinute);
 });
 
+// نقطة النهاية لاسترجاع معلومات التورنت
 app.get('/torrent-info', (req, res) => {
   const magnet = req.query.magnet;
   if (!magnet) {
@@ -257,10 +271,10 @@ app.get('/torrent-info', (req, res) => {
   }
   let parsedMagnet;
   try {
-    parsedMagnet = magnetUri(magnet);
+    parsedMagnet = getParsedMagnet(magnet);
   } catch (error) {
-    logMessage("error", `Error parsing magnet URI: ${error}`);
-    return res.status(400).json({ error: 'Invalid Magnet link.' });
+    logMessage("error", error.message);
+    return res.status(400).json({ error: error.message });
   }
   const torrentHash = parsedMagnet.infoHash;
   if (activeTorrents.has(torrentHash)) {
@@ -294,6 +308,7 @@ app.get('/torrent-info', (req, res) => {
   }
 });
 
+// نقطة النهاية لإيقاف التورنت
 app.get('/torrent/pause', (req, res) => {
   const magnet = req.query.magnet;
   if (!magnet) {
@@ -301,20 +316,22 @@ app.get('/torrent/pause', (req, res) => {
   }
   let parsedMagnet;
   try {
-    parsedMagnet = magnetUri(magnet);
+    parsedMagnet = getParsedMagnet(magnet);
   } catch (error) {
-    logMessage("error", `Error parsing magnet URI: ${error}`);
-    return res.status(400).json({ error: 'Invalid Magnet link.' });
+    logMessage("error", error.message);
+    return res.status(400).json({ error: error.message });
   }
   const torrentHash = parsedMagnet.infoHash;
   if (activeTorrents.has(torrentHash)) {
     const torrent = activeTorrents.get(torrentHash);
-    if (torrent.pause) {
+    if (typeof torrent.pause === 'function') {
       torrent.pause();
+      logMessage("info", `Torrent "${torrent.name}" paused successfully.`);
       return res.json({ message: 'Torrent paused successfully.' });
     } else {
       torrent.files.forEach(file => file.deselect());
       torrent._paused = true;
+      logMessage("info", `Torrent "${torrent.name}" paused (simulated).`);
       return res.json({ message: 'Torrent paused (simulated).' });
     }
   } else {
@@ -322,6 +339,7 @@ app.get('/torrent/pause', (req, res) => {
   }
 });
 
+// نقطة النهاية لاستئناف التورنت
 app.get('/torrent/resume', (req, res) => {
   const magnet = req.query.magnet;
   if (!magnet) {
@@ -329,20 +347,22 @@ app.get('/torrent/resume', (req, res) => {
   }
   let parsedMagnet;
   try {
-    parsedMagnet = magnetUri(magnet);
+    parsedMagnet = getParsedMagnet(magnet);
   } catch (error) {
-    logMessage("error", `Error parsing magnet URI: ${error}`);
-    return res.status(400).json({ error: 'Invalid Magnet link.' });
+    logMessage("error", error.message);
+    return res.status(400).json({ error: error.message });
   }
   const torrentHash = parsedMagnet.infoHash;
   if (activeTorrents.has(torrentHash)) {
     const torrent = activeTorrents.get(torrentHash);
-    if (torrent.resume) {
+    if (typeof torrent.resume === 'function') {
       torrent.resume();
+      logMessage("info", `Torrent "${torrent.name}" resumed successfully.`);
       return res.json({ message: 'Torrent resumed successfully.' });
     } else {
       torrent.files.forEach(file => file.select());
       torrent._paused = false;
+      logMessage("info", `Torrent "${torrent.name}" resumed (simulated).`);
       return res.json({ message: 'Torrent resumed (simulated).' });
     }
   } else {
@@ -350,6 +370,7 @@ app.get('/torrent/resume', (req, res) => {
   }
 });
 
+// نقطة النهاية لإزالة التورنت
 app.get('/torrent/remove', (req, res) => {
   const magnet = req.query.magnet;
   if (!magnet) {
@@ -357,10 +378,10 @@ app.get('/torrent/remove', (req, res) => {
   }
   let parsedMagnet;
   try {
-    parsedMagnet = magnetUri(magnet);
+    parsedMagnet = getParsedMagnet(magnet);
   } catch (error) {
-    logMessage("error", `Error parsing magnet URI: ${error}`);
-    return res.status(400).json({ error: 'Invalid Magnet link.' });
+    logMessage("error", error.message);
+    return res.status(400).json({ error: error.message });
   }
   const torrentHash = parsedMagnet.infoHash;
   if (!activeTorrents.has(torrentHash)) {
@@ -370,7 +391,7 @@ app.get('/torrent/remove', (req, res) => {
   return res.json({ message: 'Torrent removed successfully.' });
 });
 
-// استخدام متغير البيئة للمنفذ؛ Render ستحدد المنفذ من خلال process.env.PORT
+// بدء تشغيل الخادم باستخدام متغير البيئة للمنفذ
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   logMessage("info", `Server running on http://localhost:${PORT}`);
