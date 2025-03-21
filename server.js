@@ -201,6 +201,7 @@ const addTorrentIfNotExist = (magnetLink, res, range, fileIndex = 0, startMinute
   }
   const torrentHash = parsedMagnet.infoHash;
 
+  // إزالة التورنتات الأخرى غير المطابقة للتورنت الحالي
   activeTorrents.forEach((torrent, key) => {
     if (key !== torrentHash) {
       removeTorrent(key);
@@ -211,13 +212,15 @@ const addTorrentIfNotExist = (magnetLink, res, range, fileIndex = 0, startMinute
   const currentCount = torrentAccessCount.get(torrentHash) || 0;
   torrentAccessCount.set(torrentHash, currentCount + 1);
 
-  if (activeTorrents.has(torrentHash)) {
-    const torrent = activeTorrents.get(torrentHash);
+  // التحقق من وجود التورنت في activeTorrents أو في عميل WebTorrent
+  let torrent = activeTorrents.get(torrentHash) || client.get(torrentHash);
+  if (torrent) {
     torrent.lastAccess = Date.now();
     if (!torrent._loggedResumed) {
       logMessage("info", `Resuming streaming torrent: "${torrent.name}"`);
       torrent._loggedResumed = true;
     }
+    activeTorrents.set(torrentHash, torrent);
     handleTorrent(torrent, range, res, parseInt(fileIndex, 10), startMinute, endMinute);
   } else {
     logMessage("info", 'Adding new torrent...');
