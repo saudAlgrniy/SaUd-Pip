@@ -6,10 +6,14 @@ import { EventEmitter } from 'events';
 import fs from 'fs';
 import path from 'path';
 
+//
 // ضبط الحد الأقصى للمستمعين مع ضرورة مراقبة تسرب الأحداث
+//
 EventEmitter.defaultMaxListeners = 100;
 
+//
 // دالة تسجيل رسائل محسّنة مع ألوان
+//
 function logMessage(type, message) {
   const colors = {
     info: "\x1b[32m",   // أخضر للمعلومات
@@ -24,7 +28,9 @@ function logMessage(type, message) {
   process.stdout.write("\x1b[?7h"); // إعادة تفعيل التفاف السطر
 }
 
+//
 // دالة مساعدة لتحليل رابط الماجنت والتحقق منه
+//
 function getParsedMagnet(magnet) {
   try {
     return magnetUri(magnet);
@@ -35,7 +41,9 @@ function getParsedMagnet(magnet) {
 
 const app = express();
 
+//
 // إنشاء عميل WebTorrent مع إعدادات محسّنة
+//
 const client = new WebTorrent({
   torrentPort: process.env.TORRENT_PORT || 6881,
   dht: false
@@ -43,7 +51,6 @@ const client = new WebTorrent({
 
 const activeTorrents = new Map();
 const torrentAccessCount = new Map();
-
 let currentTorrentHash = null;
 
 app.use(express.static('public', {
@@ -51,32 +58,38 @@ app.use(express.static('public', {
   etag: false
 }));
 
+//
 // دالة لاستخراج نوع المحتوى بناءً على امتداد الملف
+//
 const getMimeType = (filename) => {
   if (filename.endsWith('.mp4')) return 'video/mp4';
   if (filename.endsWith('.mkv')) return 'video/x-matroska';
   return 'application/octet-stream';
 };
 
+//
 // دالة محسّنة لتحليل نطاق الطلب مع تحقق إضافي
+// في حال كان النطاق غير صالح، نقوم بإرجاع خطأ 416
+//
 function parseRange(range, fileSize) {
   if (!range) return { start: 0, end: fileSize - 1 };
   const parts = range.replace(/bytes=/, '').trim().split('-');
   let start = parseInt(parts[0], 10);
   let end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
-  
+
   if (isNaN(start) || start < 0) start = 0;
   if (isNaN(end) || end >= fileSize) end = fileSize - 1;
   if (start > end) {
-    logMessage("warn", 'Invalid range: start is greater than end. Streaming full file.');
-    start = 0;
-    end = fileSize - 1;
+    logMessage("warn", 'Invalid range: start is greater than end.');
+    throw new Error('Invalid range: start is greater than end.');
   }
   return { start, end };
 }
 
-// دالة إرسال الدفق مع معالجة الأخطاء والتأكد من إغلاق التدفقات القديمة
-const sendStream = (torrent, file, range, res, customRange = null) => {
+//
+// دالة إرسال الدفق مع معالجة الأخطاء دون إعادة استخدام خاصية _currentReadStream
+//
+const sendStream = (file, range, res, customRange = null) => {
   let startByte = 0;
   let endByte = file.length - 1;
   let statusCode = 200;
@@ -104,22 +117,17 @@ const sendStream = (torrent, file, range, res, customRange = null) => {
   res.set('Content-Type', getMimeType(file.name));
   res.status(statusCode);
 
-  // إغلاق أي تدفق سابق مفتوح لهذا التورنت
-  if (torrent._currentReadStream) {
-    torrent._currentReadStream.destroy();
-  }
-
   const readStream = file.createReadStream({ start: startByte, end: endByte });
-  torrent._currentReadStream = readStream;
   pipeline(readStream, res, (err) => {
     if (err && err.code !== 'ERR_STREAM_PREMATURE_CLOSE') {
       logMessage("error", `Stream error: ${err.message}`);
     }
-    torrent._currentReadStream = null;
   });
 };
 
+//
 // دالة معالجة التورنت مع تحسين اختيار الملف ونطاق الدفق
+//
 const handleTorrent = (torrent, range, res, fileIndex = 0, startMinute = null, endMinute = null) => {
   torrent.lastAccess = Date.now();
 
@@ -134,7 +142,7 @@ const handleTorrent = (torrent, range, res, fileIndex = 0, startMinute = null, e
   }
   const selectedFile = videoFiles[fileIndex];
 
-  // في حال وجود أكثر من ملف فيديو، تحديد الملف المطلوب فقط لتحميله
+  // إذا كان هناك أكثر من ملف فيديو، نقوم بتحديد القطع الخاصة بالملف المطلوب فقط
   if (videoFiles.length > 1) {
     const totalPieces = Math.ceil(torrent.length / torrent.pieceLength);
     torrent.deselect(0, totalPieces - 1, 0);
@@ -163,7 +171,7 @@ const handleTorrent = (torrent, range, res, fileIndex = 0, startMinute = null, e
     if (endMin !== null && startMin > endMin) {
       return res.status(416).send('Invalid minute range: startMinute is greater than endMinute');
     }
-    // لاحظ: القيمة الثابتة (7200 ثانية) تستخدم افتراض مدة الفيديو؛ يمكن تحسينها عبر استخراج بيانات الميديا
+    // استخدام مدة فيديو افتراضية (يمكن استبدالها باستخراج بيانات فعلية باستخدام مكتبات مثل ffprobe)
     const DEFAULT_VIDEO_DURATION = 7200;
     const startTimeSec = startMin * 60;
     const endTimeSec = endMin ? endMin * 60 : DEFAULT_VIDEO_DURATION;
@@ -173,10 +181,12 @@ const handleTorrent = (torrent, range, res, fileIndex = 0, startMinute = null, e
     };
   }
 
-  sendStream(torrent, selectedFile, range, res, customRange);
+  sendStream(selectedFile, range, res, customRange);
 };
 
+//
 // دالة إزالة التورنت مع تحسين التعامل مع حذف الملفات وإدارة الموارد
+//
 const removeTorrent = (torrentHash) => {
   if (activeTorrents.has(torrentHash)) {
     const torrent = activeTorrents.get(torrentHash);
@@ -188,19 +198,32 @@ const removeTorrent = (torrentHash) => {
         torrentAccessCount.delete(torrentHash);
         logMessage("warn", `Closed torrent: "${torrent.name}"`);
         const downloadPath = path.join('downloads', torrentHash);
-        fs.rm(downloadPath, { recursive: true, force: true }, (err) => {
-          if (err) {
-            logMessage("error", `Error removing download folder for torrent "${torrent.name}": ${err.message}`);
-          } else {
-            logMessage("debug", `Removed download folder: "${downloadPath}"`);
-          }
-        });
+        // استخدام fs.rm مع فحص دعم الدالة في حالة الإصدارات القديمة
+        if (fs.rm) {
+          fs.rm(downloadPath, { recursive: true, force: true }, (err) => {
+            if (err) {
+              logMessage("error", `Error removing download folder for torrent "${torrent.name}": ${err.message}`);
+            } else {
+              logMessage("debug", `Removed download folder: "${downloadPath}"`);
+            }
+          });
+        } else {
+          fs.rmdir(downloadPath, { recursive: true }, (err) => {
+            if (err) {
+              logMessage("error", `Error removing download folder for torrent "${torrent.name}": ${err.message}`);
+            } else {
+              logMessage("debug", `Removed download folder: "${downloadPath}"`);
+            }
+          });
+        }
       }
     });
   }
 };
 
+//
 // دالة إضافة تورنت في حال عدم وجوده مع إزالة التورنتات القديمة
+//
 const addTorrentIfNotExist = (magnetLink, res, range, fileIndex = 0, startMinute = null, endMinute = null) => {
   let parsedMagnet;
   try {
@@ -211,7 +234,7 @@ const addTorrentIfNotExist = (magnetLink, res, range, fileIndex = 0, startMinute
   }
   const torrentHash = parsedMagnet.infoHash;
 
-  // إزالة أي تورنت غير الذي سيتم تشغيله حاليًا
+  // إزالة أي تورنت غير الذي سيتم تشغيله حالياً
   activeTorrents.forEach((torrent, key) => {
     if (key !== torrentHash) {
       removeTorrent(key);
@@ -250,7 +273,9 @@ const addTorrentIfNotExist = (magnetLink, res, range, fileIndex = 0, startMinute
   }
 };
 
+//
 // نقطة النهاية لبث الفيديو باستخدام رابط الماجنت
+//
 app.get('/stream', (req, res) => {
   const magnet = req.query.magnet;
   const fileIndex = req.query.fileIndex || 0;
@@ -263,7 +288,9 @@ app.get('/stream', (req, res) => {
   addTorrentIfNotExist(magnet, res, range, fileIndex, startMinute, endMinute);
 });
 
+//
 // نقطة النهاية لاسترجاع معلومات التورنت
+//
 app.get('/torrent-info', (req, res) => {
   const magnet = req.query.magnet;
   if (!magnet) {
@@ -308,7 +335,9 @@ app.get('/torrent-info', (req, res) => {
   }
 });
 
+//
 // نقطة النهاية لإيقاف التورنت
+//
 app.get('/torrent/pause', (req, res) => {
   const magnet = req.query.magnet;
   if (!magnet) {
@@ -339,7 +368,9 @@ app.get('/torrent/pause', (req, res) => {
   }
 });
 
+//
 // نقطة النهاية لاستئناف التورنت
+//
 app.get('/torrent/resume', (req, res) => {
   const magnet = req.query.magnet;
   if (!magnet) {
@@ -370,7 +401,9 @@ app.get('/torrent/resume', (req, res) => {
   }
 });
 
+//
 // نقطة النهاية لإزالة التورنت
+//
 app.get('/torrent/remove', (req, res) => {
   const magnet = req.query.magnet;
   if (!magnet) {
@@ -391,7 +424,9 @@ app.get('/torrent/remove', (req, res) => {
   return res.json({ message: 'Torrent removed successfully.' });
 });
 
+//
 // بدء تشغيل الخادم باستخدام متغير البيئة للمنفذ
+//
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   logMessage("info", `Server running on http://localhost:${PORT}`);
