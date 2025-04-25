@@ -1,15 +1,15 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <!-- تعطيل التخزين المؤقت للصفحة -->
-  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-  <meta http-equiv="Pragma" content="no-cache">
-  <meta http-equiv="Expires" content="0">
-  <!-- تعطيل التكبير والتمرير على الهواتف -->
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta charset="UTF-8">
+<!-- تعطيل التخزين المؤقت للصفحة -->
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<!-- تعطيل التكبير والتمرير على الهواتف -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   
-  <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Stream">
 <link rel="icon" href="icons/icon.png" type="image/png">
@@ -677,32 +677,18 @@ main.container:not(.initial) #mainContent {
 }
 
 /* تنسيق زر السهم */
-    #toggleTranslationControls { 
-      background: #3498db; 
-      padding: 0.75rem 1.5rem;
-      border: none;
-      border-radius: 5px;
-      color: #fff;
-      font-size: 1rem;
-      cursor: pointer;
-      transition: background 0.3s;
-    }
+#toggleTranslationControls { 
+ background: #3498db; 
+ padding: 0.75rem 1.5rem;
+ border: none;
+ border-radius: 5px;
+ color: #fff;
+ font-size: 1rem;
+ cursor: pointer;
+ transition: background 0.3s;
+   }
     #toggleTranslationControls:hover { 
       background: #2980b9; 
-    }
-
-    /* تنسيق حقل اختيار الملف */
-    #subtitleFile {
-      padding: 10px;
-      border: 1px solid #555;
-      border-radius: 5px;
-      background: #333;
-      color: #e0e0e0;
-      cursor: pointer;
-      transition: border-color 0.3s;
-    }
-    #subtitleFile:hover {
-      border-color: #3498db;
     }
 
     
@@ -717,386 +703,377 @@ main.container:not(.initial) #mainContent {
     }
 
 
+.popup-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.5s ease, visibility 0s linear 0.5s;
+    z-index: 1000;
+}
 
+.popup-container.show {
+    opacity: 1;
+    visibility: visible;
+    transition: opacity 0.5s ease;
+}
 
-        .popup-container {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.7);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            opacity: 0;
-            visibility: hidden;
-            transition: opacity 0.5s ease, visibility 0s linear 0.5s;
-            z-index: 1000;
-        }
+.popup-content {
+    background: #333333;
+    color: #ffffff;
+    padding: 25px;
+    border-radius: 20px;
+    width: 80%;
+    max-width: 900px;
+    min-width: 300px;
+    position: relative;
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
+    transform: translateY(-100%) scale(0.8);
+    opacity: 0;
+    transition: transform 0.5s ease, opacity 0.5s ease;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
 
-        .popup-container.show {
-            opacity: 1;
-            visibility: visible;
-            transition: opacity 0.5s ease;
-        }
+.popup-container.show .popup-content {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+}
 
-        .popup-content {
-            background: #333333;
-            color: #ffffff;
-            padding: 25px;
-            border-radius: 20px;
-            width: 500px;
-            max-width: 90%;
-            position: relative;
-            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
-            transform: translateY(-100%) scale(0.8);
-            opacity: 0;
-            transition: transform 0.5s ease, opacity 0.5s ease;
-            overflow: hidden;
-			
-			max-height: 90vh; /* 80% من ارتفاع الشاشة */
-            overflow-y: auto; /* إضافة شريط تمرير رأسي عند الحاجة */
-			
-			
-        }
-		
-		
+.popup-content::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(0, 123, 255, 0.1), transparent);
+    z-index: -1;
+    animation: pulse 10s infinite ease-in-out;
+}
 
-        .popup-container.show .popup-content {
-            transform: translateY(0) scale(1);
-            opacity: 1;
-        }
+@keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+}
 
-        .popup-content::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            background: radial-gradient(circle, rgba(0, 123, 255, 0.1), transparent);
-            z-index: -1;
-            animation: pulse 10s infinite ease-in-out;
-        }
+.close-btn {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    font-size: 30px;
+    font-weight: bold;
+    color: #ffffff;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    z-index: 10;
+}
 
-        @keyframes pulse {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.1); }
-        }
+.close-btn:hover {
+    color: #ff4d4d;
+    transform: rotate(90deg) scale(1.2);
+}
 
-        .close-btn {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            font-size: 30px;
-            font-weight: bold;
-            color: #ffffff;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            z-index: 10;
-        }
+.file-input-container {
+    background-color: #333;
+    padding: 20px;
+    border-radius: 8px;
+    text-align: center;
+    border: 2px dashed #fff;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
 
-        .close-btn:hover {
-            color: #ff4d4d;
-            transform: rotate(90deg) scale(1.2);
-            text-shadow: 0 4px 8px rgba(255, 77, 77, 0.3);
-        }
+.file-input-container:hover {
+    background-color: #444;
+    border-color: #00bcd4;
+}
 
-        .file-input-container {
-            background-color: #333;
-            padding: 20px;
-            border-radius: 8px;
-            text-align: center;
-            width: 100%;
-            border: 2px dashed #fff;
-            transition: all 0.3s ease;
-            margin-top: 40px;
-            margin-bottom: 20px;
-            cursor: pointer;
-        }
+.file-input {
+    display: none;
+}
 
-        .file-input-container:hover {
-            background-color: #444;
-            border-color: #00bcd4;
-        }
+.label {
+    font-size: 18px;
+    font-weight: bold;
+    color: #fff;
+    margin-bottom: 15px;
+    display: block;
+}
 
-        .file-input {
-            display: none;
-        }
+.message {
+    font-size: 14px;
+    color: #bbb;
+    margin-bottom: 20px;
+}
 
-        .label {
-            font-size: 18px;
-            font-weight: bold;
-            color: #fff;
-            margin-bottom: 15px;
-            display: block;
-        }
+.drag-area {
+    margin-top: 20px;
+    color: #aaa;
+    font-size: 16px;
+}
 
-        .message {
-            font-size: 14px;
-            color: #bbb;
-            margin-bottom: 20px;
-        }
+.counter-section {
+    text-align: center;
+    padding: 15px;
+    background: #444444;
+    border-radius: 15px;
+    box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.05);
+}
 
-        .drag-area {
-            margin-top: 20px;
-            color: #aaa;
-            font-size: 16px;
-        }
+.counter-section label {
+    display: block;
+    font-size: 18px;
+    font-weight: 600;
+    color: #ffffff;
+    margin-bottom: 10px;
+}
 
-        .counter-section {
-            text-align: center;
-            margin-bottom: 30px;
-            padding: 15px;
-            background: #444444;
-            border-radius: 15px;
-            box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.05);
-        }
+.counter-controls {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
 
-        .counter-section label {
-            display: block;
-            font-size: 18px;
-            font-weight: 600;
-            color: #ffffff;
-            margin-bottom: 10px;
-        }
+.counter-btn {
+    width: 50px;
+    height: 50px;
+    font-size: 28px;
+    font-weight: bold;
+    color: #ffffff;
+    background: linear-gradient(45deg, #28a745, #34c759);
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 5px 15px rgba(40, 167, 69, 0.4);
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
 
-        .counter-controls {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
+.counter-btn.minus {
+    background: linear-gradient(45deg, #dc3545, #ff5767);
+    box-shadow: 0 5px 15px rgba(220, 53, 69, 0.4);
+}
 
-        .counter-btn {
-            width: 50px;
-            height: 50px;
-            font-size: 28px;
-            font-weight: bold;
-            color: #ffffff;
-            background: linear-gradient(45deg, #28a745, #34c759);
-            border: none;
-            border-radius: 50%;
-            cursor: pointer;
-            box-shadow: 0 5px 15px rgba(40, 167, 69, 0.4);
-            transition: all 0.3s ease;
-            position: relative;
-            overflow: hidden;
-        }
+.counter-btn::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    transition: width 0.5s ease, height 0.5s ease;
+}
 
-        .counter-btn.minus {
-            background: linear-gradient(45deg, #dc3545, #ff5767);
-            box-shadow: 0 5px 15px rgba(220, 53, 69, 0.4);
-        }
+.counter-btn:hover::before {
+    width: 200%;
+    height: 200%;
+}
 
-        .counter-btn::before {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 0;
-            height: 0;
-            background: rgba(255, 255, 255, 0.3);
-            border-radius: 50%;
-            transform: translate(-50%, -50%);
-            transition: width 0.5s ease, height 0.5s ease;
-        }
+.counter-btn:hover {
+    transform: scale(1.1);
+    box-shadow: 0 8px 20px rgba(40, 167, 69, 0.6);
+}
 
-        .counter-btn:hover::before {
-            width: 200%;
-            height: 200%;
-        }
+.counter-btn.minus:hover {
+    box-shadow: 0 8px 20px rgba(220, 53, 69, 0.6);
+}
 
-        .counter-btn:hover {
-            transform: scale(1.1);
-            box-shadow: 0 8px 20px rgba(40, 167, 69, 0.6);
-        }
+.counter-btn:active {
+    transform: scale(0.95);
+    box-shadow: 0 3px 10px rgba(40, 167, 69, 0.3);
+}
 
-        .counter-btn.minus:hover {
-            box-shadow: 0 8px 20px rgba(220, 53, 69, 0.6);
-        }
+.counter-display {
+    font-size: 28px;
+    font-weight: 700;
+    color: #ffffff;
+    margin: 0 20px;
+}
 
-        .counter-btn:active {
-            transform: scale(0.95);
-            box-shadow: 0 3px 10px rgba(40, 167, 69, 0.3);
-        }
+.color-picker {
+    text-align: center;
+    padding: 15px;
+    background: #444444;
+    border-radius: 15px;
+    box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.05);
+}
 
-        .counter-display {
-            font-size: 28px;
-            font-weight: 700;
-            color: #ffffff;
-            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            transition: color 0.3s ease;
-            margin: 0 20px;
-        }
+.color-picker label {
+    display: block;
+    font-size: 18px;
+    font-weight: 600;
+    color: #ffffff;
+    margin-bottom: 10px;
+}
 
-        .color-picker {
-            text-align: center;
-            margin-bottom: 30px;
-            padding: 15px;
-            background: #444444;
-            border-radius: 15px;
-            box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.05);
-        }
+.color-picker input {
+    width: 100%;
+    height: 50px;
+    border: 2px solid #555555;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
 
-        .color-picker label {
-            display: block;
-            font-size: 18px;
-            font-weight: 600;
-            color: #ffffff;
-            margin-bottom: 10px;
-        }
+.color-picker input:hover {
+    border-color: #007bff;
+    box-shadow: 0 0 10px rgba(0, 123, 255, 0.3);
+}
 
-        .color-picker input {
-            width: 100%;
-            height: 50px;
-            border: 2px solid #555555;
-            border-radius: 10px;
-            cursor: pointer;
-            transition: border-color 0.3s ease, box-shadow 0.3s ease;
-        }
+.accordion {
+    margin-top: 20px;
+}
 
-        .color-picker input:hover {
-            border-color: #007bff;
-            box-shadow: 0 0 10px rgba(0, 123, 255, 0.3);
-        }
+.accordion-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 20px;
+    background: linear-gradient(90deg, #444444, #555555);
+    border: 1px solid #666666;
+    border-radius: 15px;
+    cursor: pointer;
+    transition: all 0.4s ease;
+}
 
-        .accordion {
-            margin-top: 20px;
-        }
+.accordion-header:hover {
+    background: linear-gradient(90deg, #555555, #666666);
+}
 
-        .accordion-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 15px 20px;
-            background: linear-gradient(90deg, #444444, #555555);
-            border: 1px solid #666666;
-            border-radius: 15px;
-            cursor: pointer;
-            transition: all 0.4s ease;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-        }
+.accordion-header span:first-child {
+    font-size: 18px;
+    font-weight: 600;
+    color: #ffffff;
+}
 
-        .accordion-header:hover {
-            background: linear-gradient(90deg, #555555, #666666);
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
-            transform: translateY(-2px);
-        }
+.accordion-arrow {
+    font-size: 20px;
+    color: #ffffff;
+    transition: transform 0.4s ease;
+}
 
-        .accordion-header span:first-child {
-            font-size: 18px;
-            font-weight: 600;
-            color: #ffffff;
-        }
+.accordion-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.5s ease, padding 0.1s ease;
+    background: #333333;
+    border-radius: 0 0 15px 15px;
+}
 
-        .accordion-arrow {
-            font-size: 20px;
-            color: #ffffff;
-            transition: transform 0.4s ease, color 0.3s ease;
-        }
+.accordion-content.show {
+    max-height: 200px;
+    padding: 15px;
+}
 
-        .accordion-header:hover .accordion-arrow {
-            color: #cccccc;
-        }
+.timing-section {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px;
+    background: #444444;
+    border-radius: 15px;
+    box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.05);
+}
 
-        .accordion-content {
-            max-height: 0;
-            overflow: hidden;
-            transition: max-height 0.5s ease, padding 0.1s ease;
-            background: #333333;
-            border-radius: 0 0 15px 15px;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
-        }
+.timing-btn {
+    width: 40px;
+    height: 40px;
+    font-size: 20px;
+    font-weight: bold;
+    color: #ffffff;
+    background: linear-gradient(45deg, #dc3545, #ff5767);
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 5px 15px rgba(220, 53, 69, 0.4);
+    transition: all 0.3s ease;
+}
 
-        .accordion-content.show {
-            max-height: 200px;
-            padding: 15px;
-        }
+.timing-btn:hover {
+    transform: scale(1.1);
+    box-shadow: 0 8px 20px rgba(220, 53, 69, 0.6);
+}
 
-        .timing-section {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 15px;
-            background: #444444;
-            border-radius: 15px;
-            box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.05);
-        }
+.timing-btn:active {
+    transform: scale(0.95);
+}
 
-        .timing-btn {
-            width: 40px;
-            height: 40px;
-            font-size: 20px;
-            font-weight: bold;
-            color: #ffffff;
-            background: linear-gradient(45deg, #dc3545, #ff5767);
-            border: none;
-            border-radius: 50%;
-            cursor: pointer;
-            box-shadow: 0 5px 15px rgba(220, 53, 69, 0.4);
-            transition: all 0.3s ease;
-            position: relative;
-            overflow: hidden;
-        }
+.timing-display {
+    font-size: 22px;
+    font-weight: 700;
+    color: #ffffff;
+}
 
-        .timing-btn::before {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 0;
-            height: 0;
-            background: rgba(255, 255, 255, 0.3);
-            border-radius: 50%;
-            transform: translate(-50%, -50%);
-            transition: width 0.5s ease, height 0.5s ease;
-        }
+/* Responsive Design */
+@media (min-width: 768px) {
+    .popup-content {
+        flex-direction: row;
+        flex-wrap: wrap;
+        justify-content: space-between;
+    }
 
-        .timing-btn:hover::before {
-            width: 200%;
-            height: 200%;
-        }
+    .file-input-container {
+        flex: 1;
+        min-width: 300px;
+        margin: 0;
+    }
 
-        .timing-btn:hover {
-            transform: scale(1.1);
-            box-shadow: 0 8px 20px rgba(220, 53, 69, 0.6);
-        }
+    .color-picker {
+        flex: 1;
+        min-width: 200px;
+    }
 
-        .timing-btn:active {
-            transform: scale(0.95);
-            box-shadow: 0 3px 10px rgba(220, 53, 69, 0.3);
-        }
+    .counter-section {
+        flex: 1;
+        min-width: 200px;
+    }
 
-        .timing-display {
-            font-size: 22px;
-            font-weight: 700;
-            color: #ffffff;
-            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        }
+    .timing-section {
+        flex: 1;
+        min-width: 200px;
+    }
 
-        @media (max-width: 480px) {
-            .popup-content {
-                width: 90%;
-                padding: 20px;
-            }
+    .accordion {
+        flex: 1 1 100%;
+    }
+}
 
-            .open-btn {
-                padding: 10px 25px;
-                font-size: 16px;
-            }
+@media (max-width: 767px) {
+    .popup-content {
+        padding: 15px;
+        width: 90%;
+    }
 
-            .counter-btn, .timing-btn {
-                width: 35px;
-                height: 35px;
-                font-size: 18px;
-            }
+    .file-input-container,
+    .color-picker,
+    .counter-section,
+    .timing-section {
+        width: 100%;
+    }
 
-            .counter-display, .timing-display {
-                font-size: 20px;
-            }
-        }
+    .counter-btn, .timing-btn {
+        width: 35px;
+        height: 35px;
+        font-size: 18px;
+    }
+
+    .counter-display, .timing-display {
+        font-size: 20px;
+    }
+}
 
   </style>
 </head><body class="no-scroll"><main class="container initial">
@@ -1224,538 +1201,537 @@ main.container:not(.initial) #mainContent {
       <img src="" alt="Preview">
     </div>
   </div>
-  <!-- Plyr JS -->
-  <script src="https://cdn.plyr.io/3.7.2/plyr.polyfilled.js"></script>
-  <script>
-    const player = new Plyr('#videoPlayer', {
-      captions: { active: true, language: 'ar', update: true }
-    });
-    let currentMagnetLink = '';
-    let currentFileIndex = '0';
-    let openFolders = {};
-    let autoUpdateInterval;
-    let peerCounterInterval;
-    let currentPeerCounter = 0;
-    let actualPeerCount = 0;
+  <!-- Plyr JS --><script src="https://cdn.plyr.io/3.7.2/plyr.polyfilled.js"></script>
+<script>
+  const player = new Plyr('#videoPlayer', {
+    captions: { active: true, language: 'ar', update: true }
+  });
+  let currentMagnetLink = '';
+  let currentFileIndex = '0';
+  let openFolders = {};
+  let autoUpdateInterval;
+  let peerCounterInterval;
+  let currentPeerCounter = 0;
+  let actualPeerCount = 0;
 
-    let subtitleDelay = 0;
-    let subtitleFontSize = 20;
+  let subtitleDelay = 0;
+  let subtitleFontSize = 20;
 
-    function changeSubtitleSize(amount) {
-      subtitleFontSize = Math.max(10, Math.min(40, subtitleFontSize + amount));
-      document.documentElement.style.setProperty('--subtitle-font-size', `${subtitleFontSize}px`);
-      document.querySelector('.counter-display').textContent = subtitleFontSize;
+  function changeSubtitleSize(amount) {
+    subtitleFontSize = Math.max(10, Math.min(40, subtitleFontSize + amount));
+    document.documentElement.style.setProperty('--subtitle-font-size', `${subtitleFontSize}px`);
+    document.querySelector('.counter-display').textContent = subtitleFontSize;
+  }
+
+  function adjustSubtitleDelay(amount) {
+    subtitleDelay += amount;
+    const timingDisplay = document.querySelector('.timing-display');
+    timingDisplay.textContent = (subtitleDelay / 1000).toFixed(1);
+  }
+
+  function fixArabicPunctuation(text) {
+    return text
+      .replace(/\(([^()]+)\)/g, '($1)')
+      .replace(/،/g, ',')
+      .replace(/([^\s])\(/g, '$1 (')
+      .replace(/\)([^\s])/g, ') $1');
+  }
+
+  function convertSRTtoVTT(srtText) {
+    const fixedText = fixArabicPunctuation(srtText);
+    return 'WEBVTT\n\n' + fixedText
+      .replace(/\r\n/g, '\n')
+      .replace(/(\d+:\d+:\d+),(\d+)/g, (match, time, ms) => {
+        const timeParts = time.split(':');
+        const totalMs = (parseInt(timeParts[0]) * 3600 + parseInt(timeParts[1]) * 60 + parseFloat(timeParts[2])) * 1000 + parseInt(ms);
+        const adjustedTime = new Date(Math.max(0, totalMs + subtitleDelay));
+        const hh = String(adjustedTime.getUTCHours()).padStart(2, '0');
+        const mm = String(adjustedTime.getUTCMinutes()).padStart(2, '0');
+        const ss = String(adjustedTime.getUTCSeconds()).padStart(2, '0');
+        const mss = String(adjustedTime.getUTCMilliseconds()).padStart(3, '0');
+        return `${hh}:${mm}:${ss}.${mss}`;
+      })
+      .replace(/^\d+\s*$/gm, '')
+      .replace(/(\d{2}:\d{2}:\d{2}\.\d{3}) --> (\d{2}:\d{2}:\d{2}\.\d{3})/g, '$1 --> $2')
+      .replace(/\n{2,}/g, '\n\n')
+      .trim();
+  }
+
+  function isContentReadable(text) {
+    return /[\u0600-\u06FF]/.test(text) && !text.includes('???');
+  }
+
+  async function decodeSRTFile(file) {
+    const buffer = await file.arrayBuffer();
+    try {
+      const utf8 = new TextDecoder('utf-8', { fatal: true });
+      const decoded = utf8.decode(buffer);
+      if (isContentReadable(decoded)) return decoded;
+      throw new Error();
+    } catch {
+      const win1256 = new TextDecoder('windows-1256');
+      return win1256.decode(buffer);
     }
+  }
 
-    function adjustSubtitleDelay(amount) {
-      subtitleDelay += amount;
-      const timingDisplay = document.querySelector('.timing-display');
-      timingDisplay.textContent = (subtitleDelay / 1000).toFixed(1);
+  document.getElementById('fileInput').addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file || !file.name.endsWith('.srt')) return alert("يرجى اختيار ملف .srt");
+
+    const decodedText = await decodeSRTFile(file);
+    const vttContent = convertSRTtoVTT(decodedText);
+    const blob = new Blob([vttContent], { type: 'text/vtt;charset=UTF-8' });
+    const subtitleUrl = URL.createObjectURL(blob);
+
+    Array.from(player.media.querySelectorAll('track')).forEach(t => t.remove());
+
+    const track = document.createElement('track');
+    track.kind = 'subtitles';
+    track.label = 'Arabic';
+    track.srclang = 'ar';
+    track.src = subtitleUrl;
+    track.default = true;
+    player.media.appendChild(track);
+
+    player.source = {
+      type: 'video',
+      sources: [{
+        src: player.source.sources[0].src,
+        type: player.source.sources[0].type
+      }],
+      tracks: [{
+        kind: 'subtitles',
+        label: 'Arabic',
+        srclang: 'ar',
+        src: subtitleUrl,
+        default: true
+      }]
+    };
+
+    await new Promise(r => setTimeout(r, 500));
+    player.toggleCaptions(true);
+  });
+
+  function formatBytes(bytes) {
+    if (bytes < 1024) return bytes + " bytes";
+    else if (bytes < 1048576) return (bytes / 1024).toFixed(2) + " KB";
+    else if (bytes < 1073741824) return (bytes / 1048576).toFixed(2) + " MB";
+    else return (bytes / 1073741824).toFixed(2) + " GB";
+  }
+
+  function toggleTranslationPopup() {
+    const popup = document.getElementById('translationPopup');
+    const toggleButton = document.getElementById('toggleTranslationControls');
+    if (popup.classList.contains('show')) {
+      popup.classList.remove('show');
+      toggleButton.querySelector('i').style.transform = 'rotate(0deg)';
+    } else {
+      popup.classList.add('show');
+      toggleButton.querySelector('i').style.transform = 'rotate(180deg)';
     }
+  }
 
-    function fixArabicPunctuation(text) {
-      return text
-        .replace(/\(([^()]+)\)/g, '($1)')
-        .replace(/،/g, ',')
-        .replace(/([^\s])\(/g, '$1 (')
-        .replace(/\)([^\s])/g, ') $1');
-    }
+  document.addEventListener('DOMContentLoaded', () => {
+    const fileInputContainer = document.querySelector('#fileInputContainer');
+    const fileInput = document.querySelector('#fileInput');
+    fileInputContainer.addEventListener('click', () => fileInput.click());
 
-    function convertSRTtoVTT(srtText) {
-      const fixedText = fixArabicPunctuation(srtText);
-      return 'WEBVTT\n\n' + fixedText
-        .replace(/\r\n/g, '\n')
-        .replace(/(\d+:\d+:\d+),(\d+)/g, (match, time, ms) => {
-          const timeParts = time.split(':');
-          const totalMs = (parseInt(timeParts[0]) * 3600 + parseInt(timeParts[1]) * 60 + parseFloat(timeParts[2])) * 1000 + parseInt(ms);
-          const adjustedTime = new Date(Math.max(0, totalMs + subtitleDelay));
-          const hh = String(adjustedTime.getUTCHours()).padStart(2, '0');
-          const mm = String(adjustedTime.getUTCMinutes()).padStart(2, '0');
-          const ss = String(adjustedTime.getUTCSeconds()).padStart(2, '0');
-          const mss = String(adjustedTime.getUTCMilliseconds()).padStart(3, '0');
-          return `${hh}:${mm}:${ss}.${mss}`;
-        })
-        .replace(/^\d+\s*$/gm, '')
-        .replace(/(\d{2}:\d{2}:\d{2}\.\d{3}) --> (\d{2}:\d{2}:\d{2}\.\d{3})/g, '$1 --> $2')
-        .replace(/\n{2,}/g, '\n\n')
-        .trim();
-    }
-
-    function isContentReadable(text) {
-      return /[\u0600-\u06FF]/.test(text) && !text.includes('???');
-    }
-
-    async function decodeSRTFile(file) {
-      const buffer = await file.arrayBuffer();
-      try {
-        const utf8 = new TextDecoder('utf-8', { fatal: true });
-        const decoded = utf8.decode(buffer);
-        if (isContentReadable(decoded)) return decoded;
-        throw new Error();
-      } catch {
-        const win1256 = new TextDecoder('windows-1256');
-        return win1256.decode(buffer);
-      }
-    }
-
-    document.getElementById('fileInput').addEventListener('change', async (e) => {
-      const file = e.target.files[0];
-      if (!file || !file.name.endsWith('.srt')) return alert("يرجى اختيار ملف .srt");
-
-      const decodedText = await decodeSRTFile(file);
-      const vttContent = convertSRTtoVTT(decodedText);
-      const blob = new Blob([vttContent], { type: 'text/vtt;charset=UTF-8' });
-      const subtitleUrl = URL.createObjectURL(blob);
-
-      Array.from(player.media.querySelectorAll('track')).forEach(t => t.remove());
-
-      const track = document.createElement('track');
-      track.kind = 'subtitles';
-      track.label = 'Arabic';
-      track.srclang = 'ar';
-      track.src = subtitleUrl;
-      track.default = true;
-      player.media.appendChild(track);
-
-      player.source = {
-        type: 'video',
-        sources: [{
-          src: player.source.sources[0].src,
-          type: player.source.sources[0].type
-        }],
-        tracks: [{
-          kind: 'subtitles',
-          label: 'Arabic',
-          srclang: 'ar',
-          src: subtitleUrl,
-          default: true
-        }]
-      };
-
-      await new Promise(r => setTimeout(r, 500));
-      player.toggleCaptions(true);
-    });
-
-    function formatBytes(bytes) {
-      if (bytes < 1024) return bytes + " bytes";
-      else if (bytes < 1048576) return (bytes / 1024).toFixed(2) + " KB";
-      else if (bytes < 1073741824) return (bytes / 1048576).toFixed(2) + " MB";
-      else return (bytes / 1073741824).toFixed(2) + " GB";
-    }
-
-    function toggleTranslationPopup() {
-      const popup = document.getElementById('translationPopup');
-      const toggleButton = document.getElementById('toggleTranslationControls');
-      if (popup.classList.contains('show')) {
-        popup.classList.remove('show');
-        toggleButton.querySelector('i').style.transform = 'rotate(0deg)';
-      } else {
-        popup.classList.add('show');
-        toggleButton.querySelector('i').style.transform = 'rotate(180deg)';
-      }
-    }
-
-    document.addEventListener('DOMContentLoaded', () => {
-      const fileInputContainer = document.querySelector('#fileInputContainer');
-      const fileInput = document.querySelector('#fileInput');
-      fileInputContainer.addEventListener('click', () => fileInput.click());
-
-      const colorInput = document.querySelector('#color-input');
-      colorInput.addEventListener('input', () => {
-        document.documentElement.style.setProperty('--subtitle-color', colorInput.value);
-      });
-
-      const accordionHeader = document.querySelector('.accordion-header');
-      const accordionContent = document.querySelector('.accordion-content');
-      const accordionArrow = document.querySelector('.accordion-arrow');
-      accordionHeader.addEventListener('click', () => {
-        accordionContent.classList.toggle('show');
-        accordionArrow.style.transform = accordionContent.classList.contains('show') 
-          ? 'rotate(180deg)' 
-          : 'rotate(0deg)';
-      });
+    const colorInput = document.querySelector('#color-input');
+    colorInput.addEventListener('input', () => {
+      document.documentElement.style.setProperty('--subtitle-color', colorInput.value);
     });
 
-    function startStreaming() {
-      const magnetLink = document.getElementById('magnetLink').value.trim();
-      const errorMessage = document.getElementById('errorMessage');
-      const loader = document.getElementById('loader');
-      const videoContainer = document.getElementById('videoContainer');
-      const torrentDetails = document.getElementById('torrentDetails');
+    const accordionHeader = document.querySelector('.accordion-header');
+    const accordionContent = document.querySelector('.accordion-content');
+    const accordionArrow = document.querySelector('.accordion-arrow');
+    accordionHeader.addEventListener('click', () => {
+      accordionContent.classList.toggle('show');
+      accordionArrow.style.transform = accordionContent.classList.contains('show') 
+        ? 'rotate(180deg)' 
+        : 'rotate(0deg)';
+    });
+  });
 
-      if (!magnetLink) {
-        errorMessage.textContent = '⚠️ الرجاء ادخال رابط Magnet!';
-        errorMessage.style.display = 'block';
-        loader.style.display = 'none';
-        videoContainer.style.display = 'none';
-        torrentDetails.style.display = 'none';
-        return;
-      }
-      
-      if (!magnetLink.startsWith("magnet:")) {
-        errorMessage.textContent = '⚠️ الرجاء ادخال رابط Magnet صالح!';
-        errorMessage.style.display = 'block';
-        loader.style.display = 'none';
-        videoContainer.style.display = 'none';
-        torrentDetails.style.display = 'none';
-        return;
-      }
+  function startStreaming() {
+    const magnetLink = document.getElementById('magnetLink').value.trim();
+    const errorMessage = document.getElementById('errorMessage');
+    const loader = document.getElementById('loader');
+    const videoContainer = document.getElementById('videoContainer');
+    const torrentDetails = document.getElementById('torrentDetails');
 
-      errorMessage.textContent = '';
-      errorMessage.style.display = 'none';
-      currentMagnetLink = magnetLink;
-      currentFileIndex = '0';
-
-      document.querySelector('#torrentProgressBar .progress-bar-fill').style.width = "0%";
-      document.getElementById("progressPercent").textContent = "0%";
-
-      const videoSrc = `/stream?magnet=${encodeURIComponent(magnetLink)}&fileIndex=0`;
-      player.source = {
-        type: 'video',
-        sources: [{ src: videoSrc, type: 'video/mp4' }]
-      };
-
-      loader.style.display = 'flex';
-      setTimeout(() => {
-        loader.style.opacity = '1';
-      }, 50);
-      
+    if (!magnetLink) {
+      errorMessage.textContent = '⚠️ الرجاء ادخال رابط Magnet!';
+      errorMessage.style.display = 'block';
+      loader.style.display = 'none';
       videoContainer.style.display = 'none';
       torrentDetails.style.display = 'none';
-      document.getElementById('videoSelection').style.display = 'none';
-
-      currentPeerCounter = 0;
-      document.getElementById("peerCount").textContent = currentPeerCounter;
-      if (peerCounterInterval) clearInterval(peerCounterInterval);
-      peerCounterInterval = setInterval(() => {
-        if (currentPeerCounter < actualPeerCount) {
-          currentPeerCounter++;
-          document.getElementById("peerCount").textContent = currentPeerCounter;
-        }
-      }, 100);
-
-      fetchTorrentDetails(magnetLink);
-      startAutoUpdate();
-
-      setTimeout(() => {
-        loader.style.opacity = '0';
-        loader.style.display = 'none';
-        document.getElementById('inputSection').style.display = 'none';
-        const container = document.querySelector('main.container');
-        container.classList.remove('initial');
-        const mainContent = document.getElementById('mainContent');
-        mainContent.style.display = 'grid';
-        mainContent.style.opacity = 0;
-        setTimeout(() => {
-          mainContent.style.opacity = 1;
-        }, 100);
-        videoContainer.style.display = 'block';
-        torrentDetails.style.display = 'block';
-        const videoSelect = document.getElementById('videoSelect');
-        if (videoSelect.options.length > 1) {
-          document.getElementById('videoSelection').style.display = 'block';
-        }
-        document.body.classList.remove('no-scroll');
-        clearInterval(peerCounterInterval);
-      }, 10000);
+      return;
+    }
+    
+    if (!magnetLink.startsWith("magnet:")) {
+      errorMessage.textContent = '⚠️ الرجاء ادخال رابط Magnet صالح!';
+      errorMessage.style.display = 'block';
+      loader.style.display = 'none';
+      videoContainer.style.display = 'none';
+      torrentDetails.style.display = 'none';
+      return;
     }
 
-    function copyLink() {
-      if (currentMagnetLink) {
-        let url = `/stream?magnet=${encodeURIComponent(currentMagnetLink)}`;
-        if (currentFileIndex !== "0") {
-          url += `&fileIndex=${currentFileIndex}`;
-        }
-        const fullURL = `http://${window.location.hostname}:3000${url}`;
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-          navigator.clipboard.writeText(fullURL)
-            .then(() => {
-              const copyButton = document.getElementById('copyLinkButton');
-              const originalHTML = '<i class="fa-solid fa-copy"></i>';
-              copyButton.innerHTML = '<i class="fa-solid fa-check"></i>';
-              setTimeout(() => {
-                copyButton.innerHTML = originalHTML;
-              }, 2000);
-            })
-            .catch(err => {
-              fallbackCopyText(fullURL);
-            });
-        } else {
-          fallbackCopyText(fullURL);
-        }
-      } else {
-        alert('Video not streaming yet!');
+    errorMessage.textContent = '';
+    errorMessage.style.display = 'none';
+    currentMagnetLink = magnetLink;
+    currentFileIndex = '0';
+
+    document.querySelector('#torrentProgressBar .progress-bar-fill').style.width = "0%";
+    document.getElementById("progressPercent").textContent = "0%";
+
+    const videoSrc = `/stream?magnet=${encodeURIComponent(magnetLink)}&fileIndex=0`;
+    player.source = {
+      type: 'video',
+      sources: [{ src: videoSrc, type: 'video/mp4' }]
+    };
+
+    loader.style.display = 'flex';
+    setTimeout(() => {
+      loader.style.opacity = '1';
+    }, 50);
+    
+    videoContainer.style.display = 'none';
+    torrentDetails.style.display = 'none';
+    document.getElementById('videoSelection').style.display = 'none';
+
+    currentPeerCounter = 0;
+    document.getElementById("peerCount").textContent = currentPeerCounter;
+    if (peerCounterInterval) clearInterval(peerCounterInterval);
+    peerCounterInterval = setInterval(() => {
+      if (currentPeerCounter < actualPeerCount) {
+        currentPeerCounter++;
+        document.getElementById("peerCount").textContent = currentPeerCounter;
       }
-    }
+    }, 100);
 
-    function fallbackCopyText(text) {
-      const textArea = document.createElement("textarea");
-      textArea.value = text;
-      textArea.style.top = "0";
-      textArea.style.left = "0";
-      textArea.style.position = "fixed";
-      document.body.appendChild(textArea);
-      textArea.focus();
-      textArea.select();
-      try {
-        const successful = document.execCommand('copy');
-        if (successful) {
-          const copyButton = document.getElementById('copyLinkButton');
-          const originalHTML = '<i class="fa-solid fa-copy"></i>';
-          copyButton.innerHTML = '<i class="fa-solid fa-check"></i>';
-          setTimeout(() => {
-            copyButton.innerHTML = originalHTML;
-          }, 2000);
-        } else {
-          alert('Failed to copy link!');
-        }
-      } catch (err) {
+    fetchTorrentDetails(magnetLink);
+    startAutoUpdate();
+
+    setTimeout(() => {
+      loader.style.opacity = '0';
+      loader.style.display = 'none';
+      document.getElementById('inputSection').style.display = 'none';
+      const container = document.querySelector('main.container');
+      container.classList.remove('initial');
+      const mainContent = document.getElementById('mainContent');
+      mainContent.style.display = 'grid';
+      mainContent.style.opacity = 0;
+      setTimeout(() => {
+        mainContent.style.opacity = 1;
+      }, 100);
+      videoContainer.style.display = 'block';
+      torrentDetails.style.display = 'block';
+      const videoSelect = document.getElementById('videoSelect');
+      if (videoSelect.options.length > 1) {
+        document.getElementById('videoSelection').style.display = 'block';
+      }
+      document.body.classList.remove('no-scroll');
+      clearInterval(peerCounterInterval);
+    }, 10000);
+  }
+
+  function copyLink() {
+    if (currentMagnetLink) {
+      let url = `/stream?magnet=${encodeURIComponent(currentMagnetLink)}`;
+      if (currentFileIndex !== "0") {
+        url += `&fileIndex=${currentFileIndex}`;
+      }
+      const fullURL = `http://${window.location.hostname}:3000${url}`;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(fullURL)
+          .then(() => {
+            const copyButton = document.getElementById('copyLinkButton');
+            const originalHTML = '<i class="fa-solid fa-copy"></i>';
+            copyButton.innerHTML = '<i class="fa-solid fa-check"></i>';
+            setTimeout(() => {
+              copyButton.innerHTML = originalHTML;
+            }, 2000);
+          })
+          .catch(err => {
+            fallbackCopyText(fullURL);
+          });
+      } else {
+        fallbackCopyText(fullURL);
+      }
+    } else {
+      alert('Video not streaming yet!');
+    }
+  }
+
+  function fallbackCopyText(text) {
+    const textArea = document.createElement("textarea");
+    textArea.value = text;
+    textArea.style.top = "0";
+    textArea.style.left = "0";
+    textArea.style.position = "fixed";
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+    try {
+      const successful = document.execCommand('copy');
+      if (successful) {
+        const copyButton = document.getElementById('copyLinkButton');
+        const originalHTML = '<i class="fa-solid fa-copy"></i>';
+        copyButton.innerHTML = '<i class="fa-solid fa-check"></i>';
+        setTimeout(() => {
+          copyButton.innerHTML = originalHTML;
+        }, 2000);
+      } else {
         alert('Failed to copy link!');
       }
-      document.body.removeChild(textArea);
+    } catch (err) {
+      alert('Failed to copy link!');
     }
+    document.body.removeChild(textArea);
+  }
 
-    function changeVideo() {
-      const videoSelect = document.getElementById('videoSelect');
-      currentFileIndex = videoSelect.value;
-      const videoSrc = `/stream?magnet=${encodeURIComponent(currentMagnetLink)}&fileIndex=${currentFileIndex}`;
-      player.source = {
-        type: 'video',
-        sources: [{ src: videoSrc, type: 'video/mp4' }]
-      };
-      player.play();
+  function changeVideo() {
+    const videoSelect = document.getElementById('videoSelect');
+    currentFileIndex = videoSelect.value;
+    const videoSrc = `/stream?magnet=${encodeURIComponent(currentMagnetLink)}&fileIndex=${currentFileIndex}`;
+    player.source = {
+      type: 'video',
+      sources: [{ src: videoSrc, type: 'video/mp4' }]
+    };
+    player.play();
+  }
+
+  function fetchTorrentDetails(magnetLink) {
+    fetch(`/torrent-info?magnet=${encodeURIComponent(magnetLink)}`)
+      .then(response => response.json())
+      .then(data => {
+        if (data.error) {
+          console.error(data.error);
+          return;
+        }
+        document.getElementById('torrentName').textContent = `Torrent Name: ${data.name}`;
+        document.getElementById('torrentAccessCount').textContent = `Listeners: ${data.accessCount}`;
+        document.getElementById('torrentPeers').textContent = `Peers: ${data.numPeers}`;
+        actualPeerCount = parseInt(data.numPeers) || 0;
+
+        let selectedProgress = 0;
+        if (data.files && data.files.length > 0) {
+          const selectedFile = data.files.find(file => file.index == currentFileIndex);
+          if (selectedFile && (selectedFile.name.toLowerCase().endsWith('.mp4') || selectedFile.name.toLowerCase().endsWith('.mkv'))) {
+            if (typeof selectedFile.progress === 'number') {
+              selectedProgress = selectedFile.progress;
+            }
+          } else if (typeof data.progress === 'number') {
+            selectedProgress = data.progress;
+          }
+        }
+        const progressPercent = (selectedProgress * 100).toFixed(2) + '%';
+        document.querySelector('#torrentProgressBar .progress-bar-fill').style.width = progressPercent;
+        document.getElementById("progressPercent").textContent = progressPercent;
+
+        const loader = document.getElementById('loader');
+        if (loader.style.display !== 'none') {
+          document.getElementById('videoSelection').style.display = 'none';
+        } else {
+          const videoSelect = document.getElementById('videoSelect');
+          const videoFiles = data.files.filter(f => {
+            const lower = f.name.toLowerCase();
+            return lower.endsWith('.mp4') || lower.endsWith('.mkv');
+          });
+          if (videoFiles.length > 1) {
+            const currentSelection = videoSelect.value;
+            videoSelect.innerHTML = '';
+            videoFiles.forEach(file => {
+              const option = document.createElement('option');
+              option.value = file.index;
+              option.textContent = file.progress !== undefined && file.progress >= 1 ? ('🎥 ' + file.name + ' ✅') : ('🎥 ' + file.name);
+              videoSelect.appendChild(option);
+            });
+            if (currentSelection && [...videoSelect.options].some(o => o.value === currentSelection)) {
+              videoSelect.value = currentSelection;
+              currentFileIndex = currentSelection;
+            } else {
+              videoSelect.value = videoSelect.options[0].value;
+              currentFileIndex = videoSelect.options[0].value;
+            }
+            document.getElementById('videoSelection').style.display = 'block';
+          } else {
+            document.getElementById('videoSelection').style.display = 'none';
+          }
+        }
+
+        const torrentFilesElement = document.getElementById('torrentFiles');
+        torrentFilesElement.innerHTML = '<strong>Torrent Files:</strong>';
+        const groups = { videos: [], images: [], subtitles: [], txt: [], others: [] };
+
+        data.files.forEach(file => {
+          const lowerName = file.name.toLowerCase();
+          if (lowerName.endsWith('.mp4') || lowerName.endsWith('.mkv')) {
+            groups.videos.push(file);
+          } else if (/\.(jpg|jpeg|png|gif)$/.test(lowerName)) {
+            groups.images.push(file);
+          } else if (lowerName.endsWith('.srt')) {
+            groups.subtitles.push(file);
+          } else if (lowerName.endsWith('.txt')) {
+            groups.txt.push(file);
+          } else {
+            groups.others.push(file);
+          }
+        });
+
+        function createFileItem(file, groupType) {
+          let iconClass = '';
+          let iconColor = '';
+          if (groupType === 'videos') {
+            iconClass = 'fa-solid fa-file-video';
+            iconColor = '#ff4500';
+          } else if (groupType === 'images') {
+            iconClass = 'fa-solid fa-file-image';
+            iconColor = '#1e90ff';
+          } else if (groupType === 'subtitles') {
+            iconClass = 'fa-solid fa-closed-captioning';
+            iconColor = '#32cd32';
+          } else if (groupType === 'txt') {
+            iconClass = 'fa-solid fa-file-lines';
+            iconColor = '#8a2be2';
+          } else {
+            iconClass = 'fa-solid fa-file';
+            iconColor = '#6c757d';
+          }
+
+          const fileItem = document.createElement('div');
+          fileItem.className = 'file-item';
+
+          const iconElement = document.createElement('i');
+          iconElement.className = iconClass;
+          iconElement.style.color = iconColor;
+          fileItem.appendChild(iconElement);
+
+          const infoDiv = document.createElement('div');
+          infoDiv.className = 'file-info';
+          const fileName = document.createElement('p');
+          fileName.textContent = file.name;
+          const fileSize = document.createElement('span');
+          fileSize.textContent = `(${formatBytes(file.length)})`;
+          infoDiv.appendChild(fileName);
+          infoDiv.appendChild(fileSize);
+          fileItem.appendChild(infoDiv);
+
+          if (groupType === 'images') {
+            fileItem.style.cursor = 'pointer';
+            fileItem.addEventListener('click', () => openImageModal(file));
+          }
+          return fileItem;
+        }
+
+        function createFolderGroup(title, groupType, filesArray) {
+          if (filesArray.length === 0) return null;
+          const groupDiv = document.createElement('div');
+          groupDiv.className = 'folder-group';
+
+          const header = document.createElement('div');
+          header.className = 'folder-header';
+
+          const folderIcon = document.createElement('i');
+          folderIcon.className = openFolders[title] ? 'fa-solid fa-folder-open' : 'fa-solid fa-folder';
+          header.appendChild(folderIcon);
+
+          const titleText = document.createElement('span');
+          titleText.textContent = title;
+          header.appendChild(titleText);
+
+          groupDiv.appendChild(header);
+
+          const filesList = document.createElement('div');
+          filesList.className = 'files-list';
+          filesList.style.display = openFolders[title] ? 'block' : 'none';
+          filesArray.forEach(file => {
+            const fileItem = createFileItem(file, groupType);
+            filesList.appendChild(fileItem);
+          });
+          groupDiv.appendChild(filesList);
+
+          header.addEventListener('click', () => {
+            if (filesList.style.display === 'none') {
+              filesList.style.display = 'block';
+              folderIcon.className = 'fa-solid fa-folder-open';
+              openFolders[title] = true;
+            } else {
+              filesList.style.display = 'none';
+              folderIcon.className = 'fa-solid fa-folder';
+              openFolders[title] = false;
+            }
+          });
+
+          return groupDiv;
+        }
+
+        const groupsOrder = [
+          { title: 'Videos', type: 'videos', files: groups.videos },
+          { title: 'Images', type: 'images', files: groups.images },
+          { title: 'Subtitles', type: 'subtitles', files: groups.subtitles },
+          { title: 'Text Files', type: 'txt', files: groups.txt },
+          { title: 'Others', type: 'others', files: groups.others }
+        ];
+
+        groupsOrder.forEach(group => {
+          const groupElement = createFolderGroup(group.title, group.type, group.files);
+          if (groupElement) {
+            torrentFilesElement.appendChild(groupElement);
+          }
+        });
+      })
+      .catch(err => console.error('Error fetching torrent details:', err));
+  }
+
+  function startAutoUpdate() {
+    if (autoUpdateInterval) clearInterval(autoUpdateInterval);
+    autoUpdateInterval = setInterval(() => {
+      if (currentMagnetLink) {
+        fetchTorrentDetails(currentMagnetLink);
+      }
+    }, 1000);
+  }
+
+  function openImageModal(file) {
+    const imageURL = `/stream?magnet=${encodeURIComponent(currentMagnetLink)}&fileIndex=${file.index}`;
+    const modal = document.getElementById('imageModal');
+    modal.querySelector('img').src = imageURL;
+    modal.style.display = 'block';
+  }
+
+  function closeImageModal() {
+    document.getElementById('imageModal').style.display = 'none';
+  }
+
+  window.onclick = function(event) {
+    const modal = document.getElementById('imageModal');
+    if (event.target === modal) {
+      modal.style.display = 'none';
     }
+  }
 
-    function fetchTorrentDetails(magnetLink) {
-      fetch(`/torrent-info?magnet=${encodeURIComponent(magnetLink)}`)
+  function removeTorrent() {
+    if (currentMagnetLink) {
+      fetch(`/torrent/remove?magnet=${encodeURIComponent(currentMagnetLink)}`)
         .then(response => response.json())
         .then(data => {
-          if (data.error) {
-            console.error(data.error);
-            return;
-          }
-          document.getElementById('torrentName').textContent = `Torrent Name: ${data.name}`;
-          document.getElementById('torrentAccessCount').textContent = `Listeners: ${data.accessCount}`;
-          document.getElementById('torrentPeers').textContent = `Peers: ${data.numPeers}`;
-          actualPeerCount = parseInt(data.numPeers) || 0;
-
-          let selectedProgress = 0;
-          if (data.files && data.files.length > 0) {
-            const selectedFile = data.files.find(file => file.index == currentFileIndex);
-            if (selectedFile && (selectedFile.name.toLowerCase().endsWith('.mp4') || selectedFile.name.toLowerCase().endsWith('.mkv'))) {
-              if (typeof selectedFile.progress === 'number') {
-                selectedProgress = selectedFile.progress;
-              }
-            } else if (typeof data.progress === 'number') {
-              selectedProgress = data.progress;
-            }
-          }
-          const progressPercent = (selectedProgress * 100).toFixed(2) + '%';
-          document.querySelector('#torrentProgressBar .progress-bar-fill').style.width = progressPercent;
-          document.getElementById("progressPercent").textContent = progressPercent;
-
-          const loader = document.getElementById('loader');
-          if (loader.style.display !== 'none') {
-            document.getElementById('videoSelection').style.display = 'none';
-          } else {
-            const videoSelect = document.getElementById('videoSelect');
-            const videoFiles = data.files.filter(f => {
-              const lower = f.name.toLowerCase();
-              return lower.endsWith('.mp4') || lower.endsWith('.mkv');
-            });
-            if (videoFiles.length > 1) {
-              const currentSelection = videoSelect.value;
-              videoSelect.innerHTML = '';
-              videoFiles.forEach(file => {
-                const option = document.createElement('option');
-                option.value = file.index;
-                option.textContent = file.progress !== undefined && file.progress >= 1 ? ('🎥 ' + file.name + ' ✅') : ('🎥 ' + file.name);
-                videoSelect.appendChild(option);
-              });
-              if (currentSelection && [...videoSelect.options].some(o => o.value === currentSelection)) {
-                videoSelect.value = currentSelection;
-                currentFileIndex = currentSelection;
-              } else {
-                videoSelect.value = videoSelect.options[0].value;
-                currentFileIndex = videoSelect.options[0].value;
-              }
-              document.getElementById('videoSelection').style.display = 'block';
-            } else {
-              document.getElementById('videoSelection').style.display = 'none';
-            }
-          }
-
-          const torrentFilesElement = document.getElementById('torrentFiles');
-          torrentFilesElement.innerHTML = '<strong>Torrent Files:</strong>';
-          const groups = { videos: [], images: [], subtitles: [], txt: [], others: [] };
-
-          data.files.forEach(file => {
-            const lowerName = file.name.toLowerCase();
-            if (lowerName.endsWith('.mp4') || lowerName.endsWith('.mkv')) {
-              groups.videos.push(file);
-            } else if (/\.(jpg|jpeg|png|gif)$/.test(lowerName)) {
-              groups.images.push(file);
-            } else if (lowerName.endsWith('.srt')) {
-              groups.subtitles.push(file);
-            } else if (lowerName.endsWith('.txt')) {
-              groups.txt.push(file);
-            } else {
-              groups.others.push(file);
-            }
-          });
-
-          function createFileItem(file, groupType) {
-            let iconClass = '';
-            let iconColor = '';
-            if (groupType === 'videos') {
-              iconClass = 'fa-solid fa-file-video';
-              iconColor = '#ff4500';
-            } else if (groupType === 'images') {
-              iconClass = 'fa-solid fa-file-image';
-              iconColor = '#1e90ff';
-            } else if (groupType === 'subtitles') {
-              iconClass = 'fa-solid fa-closed-captioning';
-              iconColor = '#32cd32';
-            } else if (groupType === 'txt') {
-              iconClass = 'fa-solid fa-file-lines';
-              iconColor = '#8a2be2';
-            } else {
-              iconClass = 'fa-solid fa-file';
-              iconColor = '#6c757d';
-            }
-
-            const fileItem = document.createElement('div');
-            fileItem.className = 'file-item';
-
-            const iconElement = document.createElement('i');
-            iconElement.className = iconClass;
-            iconElement.style.color = iconColor;
-            fileItem.appendChild(iconElement);
-
-            const infoDiv = document.createElement('div');
-            infoDiv.className = 'file-info';
-            const fileName = document.createElement('p');
-            fileName.textContent = file.name;
-            const fileSize = document.createElement('span');
-            fileSize.textContent = `(${formatBytes(file.length)})`;
-            infoDiv.appendChild(fileName);
-            infoDiv.appendChild(fileSize);
-            fileItem.appendChild(infoDiv);
-
-            if (groupType === 'images') {
-              fileItem.style.cursor = 'pointer';
-              fileItem.addEventListener('click', () => openImageModal(file));
-            }
-            return fileItem;
-          }
-
-          function createFolderGroup(title, groupType, filesArray) {
-            if (filesArray.length === 0) return null;
-            const groupDiv = document.createElement('div');
-            groupDiv.className = 'folder-group';
-
-            const header = document.createElement('div');
-            header.className = 'folder-header';
-
-            const folderIcon = document.createElement('i');
-            folderIcon.className = openFolders[title] ? 'fa-solid fa-folder-open' : 'fa-solid fa-folder';
-            header.appendChild(folderIcon);
-
-            const titleText = document.createElement('span');
-            titleText.textContent = title;
-            header.appendChild(titleText);
-
-            groupDiv.appendChild(header);
-
-            const filesList = document.createElement('div');
-            filesList.className = 'files-list';
-            filesList.style.display = openFolders[title] ? 'block' : 'none';
-            filesArray.forEach(file => {
-              const fileItem = createFileItem(file, groupType);
-              filesList.appendChild(fileItem);
-            });
-            groupDiv.appendChild(filesList);
-
-            header.addEventListener('click', () => {
-              if (filesList.style.display === 'none') {
-                filesList.style.display = 'block';
-                folderIcon.className = 'fa-solid fa-folder-open';
-                openFolders[title] = true;
-              } else {
-                filesList.style.display = 'none';
-                folderIcon.className = 'fa-solid fa-folder';
-                openFolders[title] = false;
-              }
-            });
-
-            return groupDiv;
-          }
-
-          const groupsOrder = [
-            { title: 'Videos', type: 'videos', files: groups.videos },
-            { title: 'Images', type: 'images', files: groups.images },
-            { title: 'Subtitles', type: 'subtitles', files: groups.subtitles },
-            { title: 'Text Files', type: 'txt', files: groups.txt },
-            { title: 'Others', type: 'others', files: groups.others }
-          ];
-
-          groupsOrder.forEach(group => {
-            const groupElement = createFolderGroup(group.title, group.type, group.files);
-            if (groupElement) {
-              torrentFilesElement.appendChild(groupElement);
-            }
-          });
+          const container = document.querySelector('main.container');
+          container.style.opacity = 0;
+          container.style.transform = 'scale(0.8)';
+          setTimeout(() => {
+            container.style.display = 'none';
+            clearInterval(autoUpdateInterval);
+            location.reload(true);
+          }, 500);
         })
-        .catch(err => console.error('Error fetching torrent details:', err));
+        .catch(err => console.error('Error removing torrent:', err));
+    } else {
+      console.error('No torrent is currently streaming');
     }
-
-    function startAutoUpdate() {
-      if (autoUpdateInterval) clearInterval(autoUpdateInterval);
-      autoUpdateInterval = setInterval(() => {
-        if (currentMagnetLink) {
-          fetchTorrentDetails(currentMagnetLink);
-        }
-      }, 1000);
-    }
-
-    function openImageModal(file) {
-      const imageURL = `/stream?magnet=${encodeURIComponent(currentMagnetLink)}&fileIndex=${file.index}`;
-      const modal = document.getElementById('imageModal');
-      modal.querySelector('img').src = imageURL;
-      modal.style.display = 'block';
-    }
-
-    function closeImageModal() {
-      document.getElementById('imageModal').style.display = 'none';
-    }
-
-    window.onclick = function(event) {
-      const modal = document.getElementById('imageModal');
-      if (event.target === modal) {
-        modal.style.display = 'none';
-      }
-    }
-
-    function removeTorrent() {
-      if (currentMagnetLink) {
-        fetch(`/torrent/remove?magnet=${encodeURIComponent(currentMagnetLink)}`)
-          .then(response => response.json())
-          .then(data => {
-            const container = document.querySelector('main.container');
-            container.style.opacity = 0;
-            container.style.transform = 'scale(0.8)';
-            setTimeout(() => {
-              container.style.display = 'none';
-              clearInterval(autoUpdateInterval);
-              location.reload(true);
-            }, 500);
-          })
-          .catch(err => console.error('Error removing torrent:', err));
-      } else {
-        console.error('No torrent is currently streaming');
-      }
-    }
-  </script>
+  }
+</script>
 </body>
 
 </html>
