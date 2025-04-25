@@ -371,7 +371,7 @@ app.get('/torrent/remove', (req, res) => {
 });
 
 // استخدام متغير البيئة للمنفذ؛ Render ستحدد المنفذ من خلال process.env.PORT
-const PORT = process.env.PORT || 10000;
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   logMessage("info", `Server running on http://localhost:${PORT}`);
 });
