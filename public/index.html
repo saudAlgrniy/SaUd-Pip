@@ -24,416 +24,420 @@
   <!-- Google Fonts -->
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Changa:wght@400;700&family=Roboto+Condensed&display=swap">
   <style>
-    /* استيراد الخط الخاص للعنوان *//* استيراد الخط الخاص للعنوان */
-@import url("https://fonts.googleapis.com/css?family=Luckiest+Guy&display=swap");
+    /* استيراد الخط الخاص للعنوان */
+    @import url("https://fonts.googleapis.com/css?family=Luckiest+Guy&display=swap");
 
-/* Reset and Global Styles */
-* { box-sizing: border-box; margin: 0; padding: 0; }
-html, body { overflow-x: hidden; } /* تعطيل التمرير الأفقي */
-body { 
-  font-family: 'Changa', sans-serif; 
-  background: #121212; 
-  color: #e0e0e0; 
-  text-align: left;
-}
+    /* Reset and Global Styles */
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { overflow-x: hidden; } /* تعطيل التمرير الأفقي */
+    body { 
+      font-family: 'Changa', sans-serif; 
+      background: #121212; 
+      color: #e0e0e0; 
+      text-align: left;
+    }
 
-/* تعطيل التمرير في البداية */
-body.no-scroll {
-  overflow: hidden;
-}
-/* على الهواتف، تثبيت الصفحة عند تعطيل التمرير */
-@media (max-width: 768px) {
-  body.no-scroll {
-    position: fixed;
-    width: 100%;
-  }
-}
+	
+	
+    /* تعطيل التمرير في البداية */
+    body.no-scroll {
+      overflow: hidden;
+    }
+    /* على الهواتف، تثبيت الصفحة عند تعطيل التمرير */
+    @media (max-width: 768px) {
+      body.no-scroll {
+        position: fixed;
+        width: 100%;
+      }
+    }
+    
+    /* تأثيرات التلاشي والتصغير */
+    main.container, #mainContent {
+      transition: opacity 0.5s ease-in-out, transform 0.5s ease-in-out;
+    }
+    
+    /* الحالة الأولية */
+    main.container.initial {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      opacity: 1;
+      transform: scale(1);
+      padding: 20px;
+    }
+    
+    /* إزالة الحالة الأولية */
+    main.container:not(.initial) {
+      display: block;
+      padding: 0;
+    }
+    
+    /* قسم الإدخال */
+    #inputSection {
+      text-align: center;
+      margin-bottom: 2rem;
+      position: relative;
+      width: 100%;
+      max-width: 600px;
+    }
+    
+    /* تنسيق العنوان */
+    #inputSection h1 {
+      font-family: "Luckiest Guy", cursive;
+      font-size: clamp(2rem, 5vw, 3rem);
+      color: #ecf0f1;
+      margin-bottom: 1rem;
+      margin-top: -2rem;
+    }
+    #inputSection h1 span {
+      transform: scale(0.9);
+      display: inline-block;
+    }
+    #inputSection h1 span:first-child {
+      animation: bop 1s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards infinite alternate;
+    }
+    #inputSection h1 span:last-child {
+      animation: bopB 1s 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards infinite alternate;
+    }
+    @keyframes bop {
+      0% { transform: scale(0.9); }
+      50%, 100% { transform: scale(1); }
+    }
+    @keyframes bopB {
+      0% { transform: scale(0.9); }
+      80%, 100% { transform: scale(1) rotateZ(-3deg); }
+    }
+    
+    /* المحتوى الرئيسي */
+    #mainContent {
+      display: none;
+      opacity: 0;
+    }
+    main.container:not(.initial) #mainContent {
+      display: grid;
+      grid-template-columns: 1fr 2fr;
+      gap: 1rem;
+      padding: 1rem;
+    }
+    
+    /* تنسيق حقل الإدخال */
+    #magnetField { 
+      margin-bottom: 2rem; 
+      width: 100%;
+    }
+    #magnetField input[type="text"] {
+      width: 100%;
+      padding: 0.75rem;
+      border: 2px solid #555;
+      border-radius: 5px;
+      font-size: 1rem;
+      background: #333;
+      color: #e0e0e0;
+      margin-top: 2rem;
+    }
+    #magnetField button {
+      margin-top: 1rem;
+      padding: 0.75rem 1.5rem;
+      border: none;
+      background: #3498db;
+      color: #fff;
+      border-radius: 5px;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    #magnetField button:hover { background: #2980b9; }
+    #errorMessage { 
+      color: #e74c3c; 
+      margin-bottom: 1rem; 
+      display: none; 
+      font-size: 0.9rem; 
+    }
+    
+    /* قسم اللودر */
+    #loader { 
+      display: none; 
+      margin-top: 0.5rem;
+      text-align: center;
+      flex-direction: column;
+      align-items: center;
+      opacity: 0;
+      transition: opacity 1s ease;
+      transform: translateY(-20px); /* تحريك اللودر لأعلى قليلاً */
+    }
+    .peer-counter { 
+      margin-top: 0; /* إظهار Peers والعدد مباشرة تحت اللودر */
+      font-size: 1.5rem; /* تكبير النص قليلاً */
+      color: #ecf0f1;
+    }
+    /* تلوين رقم البير باللون الأخضر */
+    #peerCount {
+      color: #27ae60;
+      font-weight: bold;
+    }
+    
+    /* الشريط الجانبي */
+    .sidebar { 
+      background: #1e1e1e; 
+      border-radius: 10px; 
+      padding: 1rem; 
+    }
+    #torrentDetails { 
+      background: #1e1e1e; 
+      border: 1px solid #555; 
+      border-radius: 10px; 
+      padding: 1rem; 
+      margin-bottom: 1rem;
+    }
+    #torrentDetails h3 { 
+      text-align: center; 
+      margin-bottom: 1rem; 
+      color: #ecf0f1; 
+      font-size: 1.25rem; 
+    }
+    #torrentDetails p { 
+      margin-bottom: 0.5rem; 
+      font-size: 0.9rem; 
+      color: #ccc; 
+    }
+    .progress-bar { 
+      width: 100%; 
+      background: #555; 
+      border-radius: 5px; 
+      overflow: hidden; 
+      margin-top: 0.5rem; 
+      height: 0.75rem; 
+    }
+    .progress-bar-fill { 
+      height: 100%; 
+      background: #27ae60; 
+      width: 0%; 
+      transition: width 0.5s ease-in-out; 
+    }
+    .progress-header { 
+      display: flex; 
+      justify-content: space-between; 
+      font-size: 0.9rem; 
+      margin-bottom: 0.25rem; 
+    }
+    
+    /* قسم ملفات التورنت */
+    #torrentFilesContainer {
+      margin-top: 1rem;
+      background: #1e1e1e;
+      border: 1px solid #555;
+      border-radius: 10px;
+      padding: 1rem;
+    }
+    #torrentFilesContainer h3 {
+      text-align: center;
+      margin-bottom: 1rem;
+      color: #ecf0f1;
+      font-size: 1.25rem;
+    }
+    .folder-group { 
+      background: #1e1e1e; 
+      border: 1px solid #555; 
+      border-radius: 5px; 
+      margin-bottom: 1rem; 
+    }
+    .folder-header { 
+      padding: 0.5rem; 
+      background: #555; 
+      border-radius: 5px 5px 0 0; 
+      cursor: pointer; 
+      display: flex; 
+      align-items: center; 
+    }
+    .folder-header span { 
+      margin-left: 0.5rem; 
+    }
+    .folder-header i.fa-folder, .folder-header i.fa-folder-open { 
+      color: yellow; 
+    }
+    .files-list { 
+      display: none; 
+      padding: 0.5rem; 
+    }
+    .file-item { 
+      display: flex; 
+      align-items: center; 
+      margin-bottom: 0.5rem; 
+      padding: 0.25rem; 
+      border-bottom: 1px solid #555; 
+    }
+    .file-item:last-child { border-bottom: none; }
+    .file-item i { margin-right: 0.5rem; font-size: 1rem; }
+    .file-info { display: flex; flex-direction: column; }
+    /* تقصير النصوص لمنع تمدد الكونتينر عند أسماء الملفات الطويلة */
+    .file-info p {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 150px;
+    }
+    .file-info span { font-size: 0.8rem; color: #ccc; }
+    
+    /* منطقة المحتوى */
+    .content { 
+      background: #1e1e1e; 
+      border: 1px solid #555; 
+      border-radius: 10px; 
+      padding: 1rem; 
+    }
+    #videoContainer { 
+      display: none; 
+      margin-bottom: 1rem; 
+    }
+    /* إضافة إطار أبيض حول مشغل الفيديو */
+    #videoContainer video { 
+      width: 100%; 
+      border-radius: 10px; 
+      border: 2px solid #fff;
+    }
+    .control-buttons { 
+      display: flex; 
+      justify-content: center; 
+      margin-top: 1rem; 
+      gap: 1rem; 
+    }
+    .control-buttons button {
+      padding: 0.75rem 1.5rem;
+      border: none;
+      border-radius: 5px;
+      color: #fff;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    #copyLinkButton { background: #27ae60; }
+    #copyLinkButton:hover { background: #1e8449; }
+    #removeButton { background: #e74c3c; }
+    #removeButton:hover { background: #c0392b; }
+    
+    /* قسم اختيار الحلقة */
+    #videoSelection { 
+      text-align: center; 
+      margin-top: 1rem; 
+      display: none; 
+    }
+    /* تغيير تنسيق الـ label ووضعه فوق صندوق الاختيارات */
+    #videoSelection label { 
+      display: block;
+      margin-bottom: 0.5rem;
+      font-size: 1rem; 
+      color: #fff;
+    }
+    /* تصميم الـ select box ليكون عرضه 100% مثل مشغل الفيديو */
+    #videoSelect { 
+      padding: 0.75rem; 
+      font-size: 1rem; 
+      border: 1px solid #fff;
+      border-radius: 5px; 
+      background: #333;
+      color: #e0e0e0;
+      width: 100%;
+    }
+    
+    /* مودال الصورة */
+    #imageModal { 
+      display: none; 
+      position: fixed; 
+      z-index: 10000; 
+      left: 0; top: 0; 
+      width: 100%; 
+      height: 100%; 
+      overflow: auto; 
+      background: rgba(0,0,0,0.8); 
+    }
+    .modal-content { 
+      position: relative; 
+      margin: 5% auto; 
+      max-width: 90%; 
+      max-height: 90vh; 
+    }
+    .modal-content img { 
+      width: 100%; 
+      height: auto; 
+      border-radius: 10px; 
+      display: block; 
+    }
+    .modal-close { 
+      position: absolute; 
+      top: -10px; right: -10px; 
+      background: #e74c3c; 
+      color: #fff; 
+      border-radius: 50%; 
+      font-size: 1.5rem; 
+      width: 2rem; 
+      height: 2rem; 
+      text-align: center; 
+      line-height: 2rem; 
+      cursor: pointer; 
+      box-shadow: 0 4px 8px rgba(0,0,0,0.5); 
+    }
+    
+    /* Media Queries للشاشات الصغيرة */
+    @media (max-width: 768px) {
+      main.container:not(.initial) #mainContent {
+        grid-template-columns: 1fr;
+        padding: 0.5rem;
+      }
+      #inputSection h1 {
+        font-size: clamp(1.5rem, 4vw, 2rem);
+      }
+      #magnetField input[type="text"] {
+        font-size: 0.9rem;
+        padding: 0.5rem;
+      }
+      #magnetField button {
+        font-size: 0.9rem;
+        padding: 0.5rem 1rem;
+      }
+      .control-buttons button {
+        padding: 0.5rem 1rem;
+        font-size: 0.9rem;
+      }
+      #torrentDetails h3, #torrentFilesContainer h3 {
+        font-size: 1rem;
+      }
+      .file-info p { max-width: 150px; }
+      .file-info p, .file-info span { font-size: 0.8rem; }
+    }
+    
+    @media (max-width: 480px) {
+      #inputSection {
+        padding: 0 1rem;
+      }
+      #magnetField button {
+        width: 100%;
+        max-width: 200px;
+      }
+    }
+	
+	#buttonContainer button {
+      font-size: 1.5rem;
+      color: #fafafa;
+      text-transform: uppercase;
+      padding: 10px 20px;
+      border-radius: 10px;
+      border: 2px solid #fafafa;
+      background: #252525;
+      box-shadow: 3px 3px #fafafa;
+      cursor: pointer;
+      margin: 35px 0;
+    }
 
-/* تأثيرات التلاشي والتصغير */
-main.container, #mainContent {
-  transition: opacity 0.5s ease-in-out, transform 0.5s ease-in-out;
-}
-
-/* الحالة الأولية */
-main.container.initial {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  min-height: 100vh;
-  opacity: 1;
-  transform: scale(1);
-  padding: 20px;
-}
-
-/* إزالة الحالة الأولية */
-main.container:not(.initial) {
-  display: block;
-  padding: 0;
-}
-
-/* قسم الإدخال */
-#inputSection {
-  text-align: center;
-  margin-bottom: 2rem;
-  position: relative;
-  width: 100%;
-  max-width: 600px;
-}
-
-/* تنسيق العنوان */
-#inputSection h1 {
-  font-family: "Luckiest Guy", cursive;
-  font-size: clamp(2rem, 5vw, 3rem);
-  color: #ecf0f1;
-  margin-bottom: 1rem;
-  margin-top: -2rem;
-}
-#inputSection h1 span {
-  transform: scale(0.9);
-  display: inline-block;
-}
-#inputSection h1 span:first-child {
-  animation: bop 1s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards infinite alternate;
-}
-#inputSection h1 span:last-child {
-  animation: bopB 1s 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards infinite alternate;
-}
-@keyframes bop {
-  0% { transform: scale(0.9); }
-  50%, 100% { transform: scale(1); }
-}
-@keyframes bopB {
-  0% { transform: scale(0.9); }
-  80%, 100% { transform: scale(1) rotateZ(-3deg); }
-}
-
-/* المحتوى الرئيسي */
-#mainContent {
-  display: none;
-  opacity: 0;
-}
-main.container:not(.initial) #mainContent {
-  display: grid;
-  grid-template-columns: 1fr 2fr;
-  gap: 1rem;
-  padding: 1rem;
-}
-
-/* تنسيق حقل الإدخال */
-#magnetField { 
-  margin-bottom: 2rem; 
-  width: 100%;
-}
-#magnetField input[type="text"] {
-  width: 100%;
-  padding: 0.75rem;
-  border: 2px solid #555;
-  border-radius: 5px;
-  font-size: 1rem;
-  background: #333;
-  color: #e0e0e0;
-  margin-top: 2rem;
-}
-#magnetField button {
-  margin-top: 1rem;
-  padding: 0.75rem 1.5rem;
-  border: none;
-  background: #3498db;
-  color: #fff;
-  border-radius: 5px;
-  font-size: 1rem;
-  cursor: pointer;
-  transition: background 0.3s;
-}
-#magnetField button:hover { background: #2980b9; }
-#errorMessage { 
-  color: #e74c3c; 
-  margin-bottom: 1rem; 
-  display: none; 
-  font-size: 0.9rem; 
-}
-
-/* قسم اللودر */
-#loader { 
-  display: none; 
-  margin-top: 0.5rem;
-  text-align: center;
-  flex-direction: column;
-  align-items: center;
-  opacity: 0;
-  transition: opacity 1s ease;
-  transform: translateY(-20px); /* تحريك اللودر لأعلى قليلاً */
-}
-.peer-counter { 
-  margin-top: 0; /* إظهار Peers والعدد مباشرة تحت اللودر */
-  font-size: 1.5rem; /* تكبير النص قليلاً */
-  color: #ecf0f1;
-}
-/* تلوين رقم البير باللون الأخضر */
-#peerCount {
-  color: #27ae60;
-  font-weight: bold;
-}
-
-/* الشريط الجانبي */
-.sidebar { 
-  background: #1e1e1e; 
-  border-radius: 10px; 
-  padding: 1rem; 
-}
-#torrentDetails { 
-  background: #1e1e1e; 
-  border: 1px solid #555; 
-  border-radius: 10px; 
-  padding: 1rem; 
-  margin-bottom: 1rem;
-}
-#torrentDetails h3 { 
-  text-align: center; 
-  margin-bottom: 1rem; 
-  color: #ecf0f1; 
-  font-size: 1.25rem; 
-}
-#torrentDetails p { 
-  margin-bottom: 0.5rem; 
-  font-size: 0.9rem; 
-  color: #ccc; 
-}
-.progress-bar { 
-  width: 100%; 
-  background: #555; 
-  border-radius: 5px; 
-  overflow: hidden; 
-  margin-top: 0.5rem; 
-  height: 0.75rem; 
-}
-.progress-bar-fill { 
-  height: 100%; 
-  background: #27ae60; 
-  width: 0%; 
-  transition: width 0.5s ease-in-out; 
-}
-.progress-header { 
-  display: flex; 
-  justify-content: space-between; 
-  font-size: 0.9rem; 
-  margin-bottom: 0.25rem; 
-}
-
-/* قسم ملفات التورنت */
-#torrentFilesContainer {
-  margin-top: 1rem;
-  background: #1e1e1e;
-  border: 1px solid #555;
-  border-radius: 10px;
-  padding: 1rem;
-}
-#torrentFilesContainer h3 {
-  text-align: center;
-  margin-bottom: 1rem;
-  color: #ecf0f1;
-  font-size: 1.25rem;
-}
-.folder-group { 
-  background: #1e1e1e; 
-  border: 1px solid #555; 
-  border-radius: 5px; 
-  margin-bottom: 1rem; 
-}
-.folder-header { 
-  padding: 0.5rem; 
-  background: #555; 
-  border-radius: 5px 5px 0 0; 
-  cursor: pointer; 
-  display: flex; 
-  align-items: center; 
-}
-.folder-header span { 
-  margin-left: 0.5rem; 
-}
-.folder-header i.fa-folder, .folder-header i.fa-folder-open { 
-  color: yellow; 
-}
-.files-list { 
-  display: none; 
-  padding: 0.5rem; 
-}
-.file-item { 
-  display: flex; 
-  align-items: center; 
-  margin-bottom: 0.5rem; 
-  padding: 0.25rem; 
-  border-bottom: 1px solid #555; 
-}
-.file-item:last-child { border-bottom: none; }
-.file-item i { margin-right: 0.5rem; font-size: 1rem; }
-.file-info { display: flex; flex-direction: column; }
-/* تقصير النصوص لمنع تمدد الكونتينر عند أسماء الملفات الطويلة */
-.file-info p {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 150px;
-}
-.file-info span { font-size: 0.8rem; color: #ccc; }
-
-/* منطقة المحتوى */
-.content { 
-  background: #1e1e1e; 
-  border: 1px solid #555; 
-  border-radius: 10px; 
-  padding: 1rem; 
-}
-#videoContainer { 
-  display: none; 
-  margin-bottom: 1rem; 
-}
-/* إضافة إطار أبيض حول مشغل الفيديو */
-#videoContainer video { 
-  width: 100%; 
-  border-radius: 10px; 
-  border: 2px solid #fff;
-}
-.control-buttons { 
-  display: flex; 
-  justify-content: center; 
-  margin-top: 1rem; 
-  gap: 1rem; 
-}
-.control-buttons button {
-  padding: 0.75rem 1.5rem;
-  border: none;
-  border-radius: 5px;
-  color: #fff;
-  font-size: 1rem;
-  cursor: pointer;
-  transition: background 0.3s;
-}
-#copyLinkButton { background: #27ae60; }
-#copyLinkButton:hover { background: #1e8449; }
-#removeButton { background: #e74c3c; }
-#removeButton:hover { background: #c0392b; }
-
-/* قسم اختيار الحلقة */
-#videoSelection { 
-  text-align: center; 
-  margin-top: 1rem; 
-  display: none; 
-}
-/* تغيير تنسيق الـ label ووضعه فوق صندوق الاختيارات */
-#videoSelection label { 
-  display: block;
-  margin-bottom: 0.5rem;
-  font-size: 1rem; 
-  color: #fff;
-}
-/* تصميم الـ select box ليكون عرضه 100% مثل مشغل الفيديو */
-#videoSelect { 
-  padding: 0.75rem; 
-  font-size: 1rem; 
-  border: 1px solid #fff;
-  border-radius: 5px; 
-  background: #333;
-  color: #e0e0e0;
-  width: 100%;
-}
-
-/* مودال الصورة */
-#imageModal { 
-  display: none; 
-  position: fixed; 
-  z-index: 10000; 
-  left: 0; top: 0; 
-  width: 100%; 
-  height: 100%; 
-  overflow: auto; 
-  background: rgba(0,0,0,0.8); 
-}
-.modal-content { 
-  position: relative; 
-  margin: 5% auto; 
-  max-width: 90%; 
-  max-height: 90vh; 
-}
-.modal-content img { 
-  width: 100%; 
-  height: auto; 
-  border-radius: 10px; 
-  display: block; 
-}
-.modal-close { 
-  position: absolute; 
-  top: -10px; right: -10px; 
-  background: #e74c3c; 
-  color: #fff; 
-  border-radius: 50%; 
-  font-size: 1.5rem; 
-  width: 2rem; 
-  height: 2rem; 
-  text-align: center; 
-  line-height: 2rem; 
-  cursor: pointer; 
-  box-shadow: 0 4px 8px rgba(0,0,0,0.5); 
-}
-
-/* Media Queries للشاشات الصغيرة */
-@media (max-width: 768px) {
-  main.container:not(.initial) #mainContent {
-    grid-template-columns: 1fr;
-    padding: 0.5rem;
-  }
-  #inputSection h1 {
-    font-size: clamp(1.5rem, 4vw, 2rem);
-  }
-  #magnetField input[type="text"] {
-    font-size: 0.9rem;
-    padding: 0.5rem;
-  }
-  #magnetField button {
-    font-size: 0.9rem;
-    padding: 0.5rem 1rem;
-  }
-  .control-buttons button {
-    padding: 0.5rem 1rem;
-    font-size: 0.9rem;
-  }
-  #torrentDetails h3, #torrentFilesContainer h3 {
-    font-size: 1rem;
-  }
-  .file-info p { max-width: 150px; }
-  .file-info p, .file-info span { font-size: 0.8rem; }
-}
-
-@media (max-width: 480px) {
-  #inputSection {
-    padding: 0 1rem;
-  }
-  #magnetField button {
-    width: 100%;
-    max-width: 200px;
-  }
-}
-
-#buttonContainer button {
-  font-size: 1.5rem;
-  color: #fafafa;
-  text-transform: uppercase;
-  padding: 10px 20px;
-  border-radius: 10px;
-  border: 2px solid #fafafa;
-  background: #252525;
-  box-shadow: 3px 3px #fafafa;
-  cursor: pointer;
-  margin: 35px 0;
-}
-
-#buttonContainer button:active {
-  box-shadow: none;
-  transform: translate(3px, 3px);
-}
-
-/* From Uiverse.io by SouravBandyopadhyay */ 
+	#buttonContainer button:active {
+      box-shadow: none;
+      transform: translate(3px, 3px);
+    }
+	
+	
+	
+	/* From Uiverse.io by SouravBandyopadhyay */ 
 .hourglassBackground {
   position: relative;
   background-color: rgb(71, 60, 60);
@@ -462,23 +466,56 @@ main.container:not(.initial) #mainContent {
 }
 
 @-webkit-keyframes hourglassRotate {
-  0% { transform: rotateX(0deg); }
-  50% { transform: rotateX(180deg); }
-  100% { transform: rotateX(180deg); }
+  0% {
+    transform: rotateX(0deg);
+  }
+
+  50% {
+    transform: rotateX(180deg);
+  }
+
+  100% {
+    transform: rotateX(180deg);
+  }
 }
 
 @keyframes hourglassRotate {
-  0% { transform: rotateX(0deg); }
-  50% { transform: rotateX(180deg); }
-  100% { transform: rotateX(180deg); }
+  0% {
+    transform: rotateX(0deg);
+  }
+
+  50% {
+    transform: rotateX(180deg);
+  }
+
+  100% {
+    transform: rotateX(180deg);
+  }
 }
 
-.hourglassCapTop { top: 0; }
-.hourglassCapTop:before { top: -25px; }
-.hourglassCapTop:after { top: -20px; }
-.hourglassCapBottom { bottom: 0; }
-.hourglassCapBottom:before { bottom: -25px; }
-.hourglassCapBottom:after { bottom: -20px; }
+.hourglassCapTop {
+  top: 0;
+}
+
+.hourglassCapTop:before {
+  top: -25px;
+}
+
+.hourglassCapTop:after {
+  top: -20px;
+}
+
+.hourglassCapBottom {
+  bottom: 0;
+}
+
+.hourglassCapBottom:before {
+  bottom: -25px;
+}
+
+.hourglassCapBottom:after {
+  bottom: -20px;
+}
 
 .hourglassGlassTop {
   transform: rotateX(90deg);
@@ -536,23 +573,56 @@ main.container:not(.initial) #mainContent {
   animation: hideCurves 2s ease-in 0s infinite;
 }
 
-.hourglassCurves:before { left: 15px; }
-.hourglassCurves:after { left: 29px; }
+.hourglassCurves:before {
+  left: 15px;
+}
+
+.hourglassCurves:after {
+  left: 29px;
+}
 
 @-webkit-keyframes hideCurves {
-  0% { opacity: 1; }
-  25% { opacity: 0; }
-  30% { opacity: 0; }
-  40% { opacity: 1; }
-  100% { opacity: 1; }
+  0% {
+    opacity: 1;
+  }
+
+  25% {
+    opacity: 0;
+  }
+
+  30% {
+    opacity: 0;
+  }
+
+  40% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 1;
+  }
 }
 
 @keyframes hideCurves {
-  0% { opacity: 1; }
-  25% { opacity: 0; }
-  30% { opacity: 0; }
-  40% { opacity: 1; }
-  100% { opacity: 1; }
+  0% {
+    opacity: 1;
+  }
+
+  25% {
+    opacity: 0;
+  }
+
+  30% {
+    opacity: 0;
+  }
+
+  40% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 1;
+  }
 }
 
 .hourglassSandStream:before {
@@ -579,37 +649,109 @@ main.container:not(.initial) #mainContent {
 }
 
 @-webkit-keyframes sandStream1 {
-  0% { height: 0; top: 35px; }
-  50% { height: 0; top: 45px; }
-  60% { height: 35px; top: 8px; }
-  85% { height: 35px; top: 8px; }
-  100% { height: 0; top: 8px; }
+  0% {
+    height: 0;
+    top: 35px;
+  }
+
+  50% {
+    height: 0;
+    top: 45px;
+  }
+
+  60% {
+    height: 35px;
+    top: 8px;
+  }
+
+  85% {
+    height: 35px;
+    top: 8px;
+  }
+
+  100% {
+    height: 0;
+    top: 8px;
+  }
 }
 
 @keyframes sandStream1 {
-  0% { height: 0; top: 35px; }
-  50% { height: 0; top: 45px; }
-  60% { height: 35px; top: 8px; }
-  85% { height: 35px; top: 8px; }
-  100% { height: 0; top: 8px; }
+  0% {
+    height: 0;
+    top: 35px;
+  }
+
+  50% {
+    height: 0;
+    top: 45px;
+  }
+
+  60% {
+    height: 35px;
+    top: 8px;
+  }
+
+  85% {
+    height: 35px;
+    top: 8px;
+  }
+
+  100% {
+    height: 0;
+    top: 8px;
+  }
 }
 
 @-webkit-keyframes sandStream2 {
-  0% { opacity: 0; }
-  50% { opacity: 0; }
-  51% { opacity: 1; }
-  90% { opacity: 1; }
-  91% { opacity: 0; }
-  100% { opacity: 0; }
+  0% {
+    opacity: 0;
+  }
+
+  50% {
+    opacity: 0;
+  }
+
+  51% {
+    opacity: 1;
+  }
+
+  90% {
+    opacity: 1;
+  }
+
+  91% {
+    opacity: 0;
+  }
+
+  100% {
+    opacity: 0;
+  }
 }
 
 @keyframes sandStream2 {
-  0% { opacity: 0; }
-  50% { opacity: 0; }
-  51% { opacity: 1; }
-  90% { opacity: 1; }
-  91% { opacity: 0; }
-  100% { opacity: 0; }
+  0% {
+    opacity: 0;
+  }
+
+  50% {
+    opacity: 0;
+  }
+
+  51% {
+    opacity: 1;
+  }
+
+  90% {
+    opacity: 1;
+  }
+
+  91% {
+    opacity: 0;
+  }
+
+  100% {
+    opacity: 0;
+  }
 }
 
 .hourglassSand:before,
@@ -635,497 +777,172 @@ main.container:not(.initial) #mainContent {
 }
 
 @-webkit-keyframes sandFillup {
-  0% { opacity: 0; height: 0; }
-  60% { opacity: 1; height: 0; }
-  100% { opacity: 1; height: 17px; }
+  0% {
+    opacity: 0;
+    height: 0;
+  }
+
+  60% {
+    opacity: 1;
+    height: 0;
+  }
+
+  100% {
+    opacity: 1;
+    height: 17px;
+  }
 }
 
 @keyframes sandFillup {
-  0% { opacity: 0; height: 0; }
-  60% { opacity: 1; height: 0; }
-  100% { opacity: 1; height: 17px; }
+  0% {
+    opacity: 0;
+    height: 0;
+  }
+
+  60% {
+    opacity: 1;
+    height: 0;
+  }
+
+  100% {
+    opacity: 1;
+    height: 17px;
+  }
 }
 
 @-webkit-keyframes sandDeplete {
-  0% { opacity: 0; top: 45px; height: 17px; width: 38px; left: 6px; }
-  1% { opacity: 1; top: 45px; height: 17px; width: 38px; left: 6px; }
-  24% { opacity: 1; top: 45px; height: 17px; width: 38px; left: 6px; }
-  25% { opacity: 1; top: 41px; height: 17px; width: 38px; left: 6px; }
-  50% { opacity: 1; top: 41px; height: 17px; width: 38px; left: 6px; }
-  90% { opacity: 1; top: 41px; height: 0; width: 10px; left: 20px; }
+  0% {
+    opacity: 0;
+    top: 45px;
+    height: 17px;
+    width: 38px;
+    left: 6px;
+  }
+
+  1% {
+    opacity: 1;
+    top: 45px;
+    height: 17px;
+    width: 38px;
+    left: 6px;
+  }
+
+  24% {
+    opacity: 1;
+    top: 45px;
+    height: 17px;
+    width: 38px;
+    left: 6px;
+  }
+
+  25% {
+    opacity: 1;
+    top: 41px;
+    height: 17px;
+    width: 38px;
+    left: 6px;
+  }
+
+  50% {
+    opacity: 1;
+    top: 41px;
+    height: 17px;
+    width: 38px;
+    left: 6px;
+  }
+
+  90% {
+    opacity: 1;
+    top: 41px;
+    height: 0;
+    width: 10px;
+    left: 20px;
+  }
 }
 
 @keyframes sandDeplete {
-  0% { opacity: 0; top: 45px; height: 17px; width: 38px; left: 6px; }
-  1% { opacity: 1; top: 45px; height: 17px; width: 38px; left: 6px; }
-  24% { opacity: 1; top: 45px; height: 17px; width: 38px; left: 6px; }
-  25% { opacity: 1; top: 41px; height: 17px; width: 38px; left: 6px; }
-  50% { opacity: 1; top: 41px; height: 17px; width: 38px; left: 6px; }
-  90% { opacity: 1; top: 41px; height: 0; width: 10px; left: 20px; }
+  0% {
+    opacity: 0;
+    top: 45px;
+    height: 17px;
+    width: 38px;
+    left: 6px;
+  }
+
+  1% {
+    opacity: 1;
+    top: 45px;
+    height: 17px;
+    width: 38px;
+    left: 6px;
+  }
+
+  24% {
+    opacity: 1;
+    top: 45px;
+    height: 17px;
+    width: 38px;
+    left: 6px;
+  }
+
+  25% {
+    opacity: 1;
+    top: 41px;
+    height: 17px;
+    width: 38px;
+    left: 6px;
+  }
+
+  50% {
+    opacity: 1;
+    top: 41px;
+    height: 17px;
+    width: 38px;
+    left: 6px;
+  }
+
+  90% {
+    opacity: 1;
+    top: 41px;
+    height: 0;
+    width: 10px;
+    left: 20px;
+  }
 }
 
-:root {
-  --subtitle-font-size: 20px;
-}
-
-.plyr__captions {
-  font-size: var(--subtitle-font-size) !important;
-  background: none !important;
-  color: #fff !important;
-  text-shadow: 1px 1px 2px black;
-  transition: font-size 0.3s ease;
-}
-
-/* تنسيق زر السهم */
-    #toggleTranslationControls { 
-      background: #3498db; 
-      padding: 0.75rem 1.5rem;
-      border: none;
-      border-radius: 5px;
-      color: #fff;
-      font-size: 1rem;
-      cursor: pointer;
-      transition: background 0.3s;
-    }
-    #toggleTranslationControls:hover { 
-      background: #2980b9; 
-    }
-
-    /* تنسيق حقل اختيار الملف */
-    #subtitleFile {
-      padding: 10px;
-      border: 1px solid #555;
-      border-radius: 5px;
-      background: #333;
-      color: #e0e0e0;
-      cursor: pointer;
-      transition: border-color 0.3s;
-    }
-    #subtitleFile:hover {
-      border-color: #3498db;
-    }
-
-    
-    .subtitle-size-control {
-      display: flex;
-      align-items: center;
-      gap: 5px;
-    }
-    .subtitle-size-control span {
-      font-size: 1.2rem;
-      color: #fff;
-    }
-
-
-
-
-        .popup-container {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.7);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            opacity: 0;
-            visibility: hidden;
-            transition: opacity 0.5s ease, visibility 0s linear 0.5s;
-            z-index: 1000;
-        }
-
-        .popup-container.show {
-            opacity: 1;
-            visibility: visible;
-            transition: opacity 0.5s ease;
-        }
-
-        .popup-content {
-            background: #333333;
-            color: #ffffff;
-            padding: 25px;
-            border-radius: 20px;
-            width: 500px;
-            max-width: 90%;
-            position: relative;
-            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
-            transform: translateY(-100%) scale(0.8);
-            opacity: 0;
-            transition: transform 0.5s ease, opacity 0.5s ease;
-            overflow: hidden;
-			
-			max-height: 90vh; /* 80% من ارتفاع الشاشة */
-            overflow-y: auto; /* إضافة شريط تمرير رأسي عند الحاجة */
-			
-			
-        }
-		
-		
-
-        .popup-container.show .popup-content {
-            transform: translateY(0) scale(1);
-            opacity: 1;
-        }
-
-        .popup-content::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            background: radial-gradient(circle, rgba(0, 123, 255, 0.1), transparent);
-            z-index: -1;
-            animation: pulse 10s infinite ease-in-out;
-        }
-
-        @keyframes pulse {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.1); }
-        }
-
-        .close-btn {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            font-size: 30px;
-            font-weight: bold;
-            color: #ffffff;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            z-index: 10;
-        }
-
-        .close-btn:hover {
-            color: #ff4d4d;
-            transform: rotate(90deg) scale(1.2);
-            text-shadow: 0 4px 8px rgba(255, 77, 77, 0.3);
-        }
-
-        .file-input-container {
-            background-color: #333;
-            padding: 20px;
-            border-radius: 8px;
-            text-align: center;
-            width: 100%;
-            border: 2px dashed #fff;
-            transition: all 0.3s ease;
-            margin-top: 40px;
-            margin-bottom: 20px;
-            cursor: pointer;
-        }
-
-        .file-input-container:hover {
-            background-color: #444;
-            border-color: #00bcd4;
-        }
-
-        .file-input {
-            display: none;
-        }
-
-        .label {
-            font-size: 18px;
-            font-weight: bold;
-            color: #fff;
-            margin-bottom: 15px;
-            display: block;
-        }
-
-        .message {
-            font-size: 14px;
-            color: #bbb;
-            margin-bottom: 20px;
-        }
-
-        .drag-area {
-            margin-top: 20px;
-            color: #aaa;
-            font-size: 16px;
-        }
-
-        .counter-section {
-            text-align: center;
-            margin-bottom: 30px;
-            padding: 15px;
-            background: #444444;
-            border-radius: 15px;
-            box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.05);
-        }
-
-        .counter-section label {
-            display: block;
-            font-size: 18px;
-            font-weight: 600;
-            color: #ffffff;
-            margin-bottom: 10px;
-        }
-
-        .counter-controls {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-
-        .counter-btn {
-            width: 50px;
-            height: 50px;
-            font-size: 28px;
-            font-weight: bold;
-            color: #ffffff;
-            background: linear-gradient(45deg, #28a745, #34c759);
-            border: none;
-            border-radius: 50%;
-            cursor: pointer;
-            box-shadow: 0 5px 15px rgba(40, 167, 69, 0.4);
-            transition: all 0.3s ease;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .counter-btn.minus {
-            background: linear-gradient(45deg, #dc3545, #ff5767);
-            box-shadow: 0 5px 15px rgba(220, 53, 69, 0.4);
-        }
-
-        .counter-btn::before {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 0;
-            height: 0;
-            background: rgba(255, 255, 255, 0.3);
-            border-radius: 50%;
-            transform: translate(-50%, -50%);
-            transition: width 0.5s ease, height 0.5s ease;
-        }
-
-        .counter-btn:hover::before {
-            width: 200%;
-            height: 200%;
-        }
-
-        .counter-btn:hover {
-            transform: scale(1.1);
-            box-shadow: 0 8px 20px rgba(40, 167, 69, 0.6);
-        }
-
-        .counter-btn.minus:hover {
-            box-shadow: 0 8px 20px rgba(220, 53, 69, 0.6);
-        }
-
-        .counter-btn:active {
-            transform: scale(0.95);
-            box-shadow: 0 3px 10px rgba(40, 167, 69, 0.3);
-        }
-
-        .counter-display {
-            font-size: 28px;
-            font-weight: 700;
-            color: #ffffff;
-            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            transition: color 0.3s ease;
-            margin: 0 20px;
-        }
-
-        .color-picker {
-            text-align: center;
-            margin-bottom: 30px;
-            padding: 15px;
-            background: #444444;
-            border-radius: 15px;
-            box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.05);
-        }
-
-        .color-picker label {
-            display: block;
-            font-size: 18px;
-            font-weight: 600;
-            color: #ffffff;
-            margin-bottom: 10px;
-        }
-
-        .color-picker input {
-            width: 100%;
-            height: 50px;
-            border: 2px solid #555555;
-            border-radius: 10px;
-            cursor: pointer;
-            transition: border-color 0.3s ease, box-shadow 0.3s ease;
-        }
-
-        .color-picker input:hover {
-            border-color: #007bff;
-            box-shadow: 0 0 10px rgba(0, 123, 255, 0.3);
-        }
-
-        .accordion {
-            margin-top: 20px;
-        }
-
-        .accordion-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 15px 20px;
-            background: linear-gradient(90deg, #444444, #555555);
-            border: 1px solid #666666;
-            border-radius: 15px;
-            cursor: pointer;
-            transition: all 0.4s ease;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-        }
-
-        .accordion-header:hover {
-            background: linear-gradient(90deg, #555555, #666666);
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
-            transform: translateY(-2px);
-        }
-
-        .accordion-header span:first-child {
-            font-size: 18px;
-            font-weight: 600;
-            color: #ffffff;
-        }
-
-        .accordion-arrow {
-            font-size: 20px;
-            color: #ffffff;
-            transition: transform 0.4s ease, color 0.3s ease;
-        }
-
-        .accordion-header:hover .accordion-arrow {
-            color: #cccccc;
-        }
-
-        .accordion-content {
-            max-height: 0;
-            overflow: hidden;
-            transition: max-height 0.5s ease, padding 0.1s ease;
-            background: #333333;
-            border-radius: 0 0 15px 15px;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
-        }
-
-        .accordion-content.show {
-            max-height: 200px;
-            padding: 15px;
-        }
-
-        .timing-section {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 15px;
-            background: #444444;
-            border-radius: 15px;
-            box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.05);
-        }
-
-        .timing-btn {
-            width: 40px;
-            height: 40px;
-            font-size: 20px;
-            font-weight: bold;
-            color: #ffffff;
-            background: linear-gradient(45deg, #dc3545, #ff5767);
-            border: none;
-            border-radius: 50%;
-            cursor: pointer;
-            box-shadow: 0 5px 15px rgba(220, 53, 69, 0.4);
-            transition: all 0.3s ease;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .timing-btn::before {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 0;
-            height: 0;
-            background: rgba(255, 255, 255, 0.3);
-            border-radius: 50%;
-            transform: translate(-50%, -50%);
-            transition: width 0.5s ease, height 0.5s ease;
-        }
-
-        .timing-btn:hover::before {
-            width: 200%;
-            height: 200%;
-        }
-
-        .timing-btn:hover {
-            transform: scale(1.1);
-            box-shadow: 0 8px 20px rgba(220, 53, 69, 0.6);
-        }
-
-        .timing-btn:active {
-            transform: scale(0.95);
-            box-shadow: 0 3px 10px rgba(220, 53, 69, 0.3);
-        }
-
-        .timing-display {
-            font-size: 22px;
-            font-weight: 700;
-            color: #ffffff;
-            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        }
-
-        @media (max-width: 480px) {
-            .popup-content {
-                width: 90%;
-                padding: 20px;
-            }
-
-            .open-btn {
-                padding: 10px 25px;
-                font-size: 16px;
-            }
-
-            .counter-btn, .timing-btn {
-                width: 35px;
-                height: 35px;
-                font-size: 18px;
-            }
-
-            .counter-display, .timing-display {
-                font-size: 20px;
-            }
-        }
-
+	
   </style>
-</head><body class="no-scroll"><main class="container initial">
+</head><body class="no-scroll">
+  <main class="container initial">
     <!-- قسم الإدخال -->
     <div id="inputSection">
       <h1>
         <span>"Streaming"</span>
         <span style="color: #ff4500;">"Torrent"</span>
       </h1>
-      <div id="magnetField">
-        <input type="text" id="magnetLink" placeholder="Enter Magnet Link Here ..." 
-               name="text" autocomplete="off" autocorrect="off" spellcheck="false"
-               pattern="^magnet:.*" title="ادخل رابط Magnet صالح">
-      </div>
-      <div id="buttonContainer">
-        <button onclick="startStreaming()">Start Streaming</button>
+      <div id="inputSection">
+        <div id="magnetField">
+          <input type="text" id="magnetLink" placeholder="Enter Magnet Link Here ..." 
+                 name="text" autocomplete="off" autocorrect="off" spellcheck="false"
+                 pattern="^magnet:.*" title="ادخل رابط Magnet صالح">
+        </div>
+        <div id="buttonContainer">
+          <button onclick="startStreaming()">Start Streaming</button>
+        </div>
       </div>
       <div id="loader">
-        <div class="hourglassBackground">
-          <div class="hourglassContainer">
-            <div class="hourglassCurves"></div>
-            <div class="hourglassCapTop"></div>
-            <div class="hourglassGlassTop"></div>
-            <div class="hourglassSand"></div>
-            <div class="hourglassSandStream"></div>
-            <div class="hourglassCapBottom"></div>
-            <div class="hourglassGlass"></div>
-          </div>
-        </div>
+         <!-- From Uiverse.io by SouravBandyopadhyay -->
+         <div class="hourglassBackground">
+            <div class="hourglassContainer">
+              <div class="hourglassCurves"></div>
+              <div class="hourglassCapTop"></div>
+              <div class="hourglassGlassTop"></div>
+              <div class="hourglassSand"></div>
+              <div class="hourglassSandStream"></div>
+              <div class="hourglassCapBottom"></div>
+              <div class="hourglassGlass"></div>
+            </div>
+         </div>
         <div id="peerCounter" class="peer-counter">
           Peers: <span id="peerCount">0</span>
         </div>
@@ -1168,11 +985,9 @@ main.container:not(.initial) #mainContent {
             <button id="removeButton" onclick="removeTorrent()" title="Remove Torrent">
               <i class="fa-solid fa-trash"></i>
             </button>
-            <button id="toggleTranslationControls" onclick="toggleTranslationPopup()" title="إظهار/إخفاء خصائص الترجمة">
-              <i class="fas fa-chevron-down"></i>
-            </button>
           </div>
         </div>
+        <!-- قسم اختيار الحلقة مع النص فوق صندوق الاختيارات -->
         <div id="videoSelection">
           <label for="videoSelect">اختر الحلقة</label>
           <select id="videoSelect" onchange="changeVideo()"></select>
@@ -1180,43 +995,6 @@ main.container:not(.initial) #mainContent {
       </div>
     </div>
   </main>
-  <!-- النافذة المنبثقة للترجمة -->
-  <div class="popup-container" id="translationPopup">
-    <div class="popup-content">
-      <span class="close-btn" onclick="toggleTranslationPopup()">×</span>
-      <div class="file-input-container" id="fileInputContainer">
-        <label for="fileInput" class="label">اختر ملف الترجمة أو اسقطه هنا</label>
-        <input type="file" id="fileInput" class="file-input" accept=".srt,.vtt,.sub">
-        <div class="message">أو اسحب الملف هنا</div>
-        <div class="drag-area">Choose subtitle file or drag it here</div>
-      </div>
-      <div class="counter-section">
-        <label>حجم الخط</label>
-        <div class="counter-controls">
-          <button class="counter-btn minus" onclick="changeSubtitleSize(-2)">-</button>
-          <span class="counter-display">20</span>
-          <button class="counter-btn plus" onclick="changeSubtitleSize(2)">+</button>
-        </div>
-      </div>
-      <div class="color-picker">
-        <label for="color-input">اختر لون الخط</label>
-        <input type="color" id="color-input" value="#ffffff">
-      </div>
-      <div class="accordion">
-        <div class="accordion-header">
-          <span>تعديل توقيت الترجمة</span>
-          <span class="accordion-arrow">▼</span>
-        </div>
-        <div class="accordion-content">
-          <div class="timing-section">
-            <button class="timing-btn minus" onclick="adjustSubtitleDelay(-500)">-</button>
-            <span class="timing-display">0.0</span>
-            <button class="timing-btn plus" onclick="adjustSubtitleDelay(500)">+</button>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
   <!-- مودال الصورة -->
   <div id="imageModal">
     <div class="modal-content">
@@ -1226,10 +1004,8 @@ main.container:not(.initial) #mainContent {
   </div>
   <!-- Plyr JS -->
   <script src="https://cdn.plyr.io/3.7.2/plyr.polyfilled.js"></script>
-  <script>
-    const player = new Plyr('#videoPlayer', {
-      captions: { active: true, language: 'ar', update: true }
-    });
+ <script>
+    const player = new Plyr('#videoPlayer');
     let currentMagnetLink = '';
     let currentFileIndex = '0';
     let openFolders = {};
@@ -1238,143 +1014,12 @@ main.container:not(.initial) #mainContent {
     let currentPeerCounter = 0;
     let actualPeerCount = 0;
 
-    let subtitleDelay = 0;
-    let subtitleFontSize = 20;
-
-    function changeSubtitleSize(amount) {
-      subtitleFontSize = Math.max(10, Math.min(40, subtitleFontSize + amount));
-      document.documentElement.style.setProperty('--subtitle-font-size', `${subtitleFontSize}px`);
-      document.querySelector('.counter-display').textContent = subtitleFontSize;
-    }
-
-    function adjustSubtitleDelay(amount) {
-      subtitleDelay += amount;
-      const timingDisplay = document.querySelector('.timing-display');
-      timingDisplay.textContent = (subtitleDelay / 1000).toFixed(1);
-    }
-
-    function fixArabicPunctuation(text) {
-      return text
-        .replace(/\(([^()]+)\)/g, '($1)')
-        .replace(/،/g, ',')
-        .replace(/([^\s])\(/g, '$1 (')
-        .replace(/\)([^\s])/g, ') $1');
-    }
-
-    function convertSRTtoVTT(srtText) {
-      const fixedText = fixArabicPunctuation(srtText);
-      return 'WEBVTT\n\n' + fixedText
-        .replace(/\r\n/g, '\n')
-        .replace(/(\d+:\d+:\d+),(\d+)/g, (match, time, ms) => {
-          const timeParts = time.split(':');
-          const totalMs = (parseInt(timeParts[0]) * 3600 + parseInt(timeParts[1]) * 60 + parseFloat(timeParts[2])) * 1000 + parseInt(ms);
-          const adjustedTime = new Date(Math.max(0, totalMs + subtitleDelay));
-          const hh = String(adjustedTime.getUTCHours()).padStart(2, '0');
-          const mm = String(adjustedTime.getUTCMinutes()).padStart(2, '0');
-          const ss = String(adjustedTime.getUTCSeconds()).padStart(2, '0');
-          const mss = String(adjustedTime.getUTCMilliseconds()).padStart(3, '0');
-          return `${hh}:${mm}:${ss}.${mss}`;
-        })
-        .replace(/^\d+\s*$/gm, '')
-        .replace(/(\d{2}:\d{2}:\d{2}\.\d{3}) --> (\d{2}:\d{2}:\d{2}\.\d{3})/g, '$1 --> $2')
-        .replace(/\n{2,}/g, '\n\n')
-        .trim();
-    }
-
-    function isContentReadable(text) {
-      return /[\u0600-\u06FF]/.test(text) && !text.includes('???');
-    }
-
-    async function decodeSRTFile(file) {
-      const buffer = await file.arrayBuffer();
-      try {
-        const utf8 = new TextDecoder('utf-8', { fatal: true });
-        const decoded = utf8.decode(buffer);
-        if (isContentReadable(decoded)) return decoded;
-        throw new Error();
-      } catch {
-        const win1256 = new TextDecoder('windows-1256');
-        return win1256.decode(buffer);
-      }
-    }
-
-    document.getElementById('fileInput').addEventListener('change', async (e) => {
-      const file = e.target.files[0];
-      if (!file || !file.name.endsWith('.srt')) return alert("يرجى اختيار ملف .srt");
-
-      const decodedText = await decodeSRTFile(file);
-      const vttContent = convertSRTtoVTT(decodedText);
-      const blob = new Blob([vttContent], { type: 'text/vtt;charset=UTF-8' });
-      const subtitleUrl = URL.createObjectURL(blob);
-
-      Array.from(player.media.querySelectorAll('track')).forEach(t => t.remove());
-
-      const track = document.createElement('track');
-      track.kind = 'subtitles';
-      track.label = 'Arabic';
-      track.srclang = 'ar';
-      track.src = subtitleUrl;
-      track.default = true;
-      player.media.appendChild(track);
-
-      player.source = {
-        type: 'video',
-        sources: [{
-          src: player.source.sources[0].src,
-          type: player.source.sources[0].type
-        }],
-        tracks: [{
-          kind: 'subtitles',
-          label: 'Arabic',
-          srclang: 'ar',
-          src: subtitleUrl,
-          default: true
-        }]
-      };
-
-      await new Promise(r => setTimeout(r, 500));
-      player.toggleCaptions(true);
-    });
-
     function formatBytes(bytes) {
       if (bytes < 1024) return bytes + " bytes";
       else if (bytes < 1048576) return (bytes / 1024).toFixed(2) + " KB";
       else if (bytes < 1073741824) return (bytes / 1048576).toFixed(2) + " MB";
       else return (bytes / 1073741824).toFixed(2) + " GB";
     }
-
-    function toggleTranslationPopup() {
-      const popup = document.getElementById('translationPopup');
-      const toggleButton = document.getElementById('toggleTranslationControls');
-      if (popup.classList.contains('show')) {
-        popup.classList.remove('show');
-        toggleButton.querySelector('i').style.transform = 'rotate(0deg)';
-      } else {
-        popup.classList.add('show');
-        toggleButton.querySelector('i').style.transform = 'rotate(180deg)';
-      }
-    }
-
-    document.addEventListener('DOMContentLoaded', () => {
-      const fileInputContainer = document.querySelector('#fileInputContainer');
-      const fileInput = document.querySelector('#fileInput');
-      fileInputContainer.addEventListener('click', () => fileInput.click());
-
-      const colorInput = document.querySelector('#color-input');
-      colorInput.addEventListener('input', () => {
-        document.documentElement.style.setProperty('--subtitle-color', colorInput.value);
-      });
-
-      const accordionHeader = document.querySelector('.accordion-header');
-      const accordionContent = document.querySelector('.accordion-content');
-      const accordionArrow = document.querySelector('.accordion-arrow');
-      accordionHeader.addEventListener('click', () => {
-        accordionContent.classList.toggle('show');
-        accordionArrow.style.transform = accordionContent.classList.contains('show') 
-          ? 'rotate(180deg)' 
-          : 'rotate(0deg)';
-      });
-    });
 
     function startStreaming() {
       const magnetLink = document.getElementById('magnetLink').value.trim();
@@ -1466,7 +1111,8 @@ main.container:not(.initial) #mainContent {
         if (currentFileIndex !== "0") {
           url += `&fileIndex=${currentFileIndex}`;
         }
-        const fullURL = `http://${window.location.hostname}:3000${url}`;
+        // استخدام window.location.origin لضمان تطابق الرابط مع بيئة النشر على Render
+        const fullURL = `${window.location.origin}${url}`;
         if (navigator.clipboard && navigator.clipboard.writeText) {
           navigator.clipboard.writeText(fullURL)
             .then(() => {
