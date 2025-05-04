@@ -4,7 +4,6 @@
   "type": "module",
   "main": "server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node server.js"
   },
   "keywords": [],
@@ -20,6 +19,7 @@
     "magnet-uri": "^7.0.7",
     "mediainfo.js": "^0.3.4",
     "music-metadata": "^11.0.0",
-    "webtorrent": "^2.5.19"
+    "webtorrent": "^2.5.19",
+    "ws": "^8.18.1"
   }
 }
