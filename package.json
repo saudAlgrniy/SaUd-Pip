@@ -21,6 +21,6 @@
     "music-metadata": "^11.0.0",
     "webtorrent": "^2.5.19",
     "ws": "^8.18.1",
-    "srt-to-vtt": "1.0.4"
+    "srt-to-vtt": "^1.0.3"
   }
 }
