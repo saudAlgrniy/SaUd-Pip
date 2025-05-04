@@ -1,377 +1,366 @@
 import express from 'express';
-import WebTorrent from 'webtorrent';
-import magnetUri from 'magnet-uri';
-import { pipeline } from 'stream';
-import { EventEmitter } from 'events';
-import fs from 'fs';
-import path from 'path';
+import { createServer } from 'http';
+import { WebSocketServer } from 'ws';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+import TorrentManager from './torrentManager.js';
+import srt2vtt from 'srt-to-vtt';
+import { PassThrough } from 'stream';
 
-EventEmitter.defaultMaxListeners = 100;
+// --- إعدادات أساسية ---
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
-// دالة مساعدة لتنسيق الرسائل في الـ cmd مع ألوان مختلفة
-function logMessage(type, message) {
-  const colors = {
-    info: "\x1b[32m",   // أخضر للمعلومات
-    error: "\x1b[31m",  // أحمر للأخطاء
-    warn: "\x1b[33m",   // أصفر للتحذيرات
-    debug: "\x1b[34m"   // أزرق للتصحيح
-  };
-  const color = colors[type] || "";
-  const reset = "\x1b[0m";
-  // تعطيل التفاف السطر
-  process.stdout.write("\x1b[?7l");
-  // طباعة الرسالة مع سطر فارغ قبل وبعدها
-  console.log(`\n${color}${message}${reset}\n`);
-  // إعادة تفعيل التفاف السطر
-  process.stdout.write("\x1b[?7h");
+// --- دالة مساعدة للتسجيل الملون ---
+function logMessage(type, message) { /* ... نفس الدالة ... */
+     const colors = { info: "\x1b[32m", error: "\x1b[31m", warn: "\x1b[33m", debug: "\x1b[34m", ws: "\x1b[36m" };
+    const color = colors[type] || "";
+    const reset = "\x1b[0m";
+    console.log(`${color}[Server:${type.toUpperCase()}] ${message}${reset}`);
 }
 
+// --- تهيئة Express و HTTP و WebSocket ---
 const app = express();
+const server = createServer(app);
+const wss = new WebSocketServer({ server });
 
-// إنشاء عميل WebTorrent مع تحديد منفذ ثابت (من خلال متغير البيئة TORRENT_PORT أو القيمة الافتراضية 6881)
-// وتعطيل DHT لتقليل عدد المنافذ المفتوحة
-const client = new WebTorrent({
-  torrentPort: process.env.TORRENT_PORT || 6881,
-  dht: false
+// --- خدمة الملفات الثابتة ---
+const publicPath = join(__dirname, 'public');
+logMessage('info', `Serving static files from: ${publicPath}`);
+app.use(express.static(publicPath));
+
+// --- إنشاء وإدارة TorrentManager ---
+const torrentManager = new TorrentManager();
+
+// --- معالجة اتصالات WebSocket ---
+wss.on('connection', (ws, req) => {
+    const clientIp = req.socket.remoteAddress || req.headers['x-forwarded-for'] || 'unknown';
+    logMessage('ws', `Client connected from IP: ${clientIp}`);
+    let currentFileId = null; // يتتبع التورنت *النشط* لهذا الاتصال المحدد
+
+    // --- دالة كول باك للحالة ---
+    const sendStatusUpdate = (status) => {
+        if (ws.readyState === ws.OPEN) {
+            if (status.fileId === currentFileId) { // إرسال فقط إذا كان للتورنت النشط
+                ws.send(JSON.stringify(status));
+            }
+        }
+    };
+
+    // --- معالجة الرسائل ---
+    ws.on('message', async (message) => {
+        let data;
+        try {
+            data = JSON.parse(message.toString());
+            logMessage('ws', `Received message type: ${data.type} from ${clientIp} (Index: ${data.videoIndex ?? 'N/A'})`);
+        } catch (error) {
+            logMessage('error', `Failed to parse message from ${clientIp}: ${message.toString().substring(0, 100)}`); // Log truncated message
+            if (ws.readyState === ws.OPEN) ws.send(JSON.stringify({ type: 'error', message: 'Invalid JSON message format.' }));
+            return;
+        }
+
+        try {
+            let torrentPromise = null;
+            const options = {};
+            if (data.videoIndex !== undefined && !isNaN(parseInt(data.videoIndex, 10))) {
+                options.preferredVideoIndex = parseInt(data.videoIndex, 10);
+                logMessage('info', `Client ${clientIp} requested video index: ${options.preferredVideoIndex}`);
+            } else {
+                logMessage('debug', `No valid video index provided by ${clientIp}, using default.`);
+            }
+
+            // 1. التنظيف *قبل* البدء
+            const previousFileId = currentFileId; // Store previous ID before clearing
+            if (previousFileId) {
+                 logMessage('warn', `Cleaning up previous torrent ${previousFileId} for new request from ${clientIp}.`);
+                 currentFileId = null; // Clear active ID immediately
+                 await torrentManager.cleanup(previousFileId); // Perform cleanup
+                 logMessage('info', `Cleanup completed for ${previousFileId}`);
+            }
+
+
+            // 2. تحديد دالة الإضافة
+            if (data.type === 'torrentFile' && data.fileData) {
+                logMessage('info', `Processing 'torrentFile' request from ${clientIp}...`);
+                const fileBuffer = Buffer.from(data.fileData, 'base64');
+                torrentPromise = torrentManager.addTorrentFile(fileBuffer, sendStatusUpdate, options);
+
+            } else if (data.type === 'magnetLink' && data.magnetLink) {
+                logMessage('info', `Processing 'magnetLink' request from ${clientIp}...`);
+                torrentPromise = torrentManager.addTorrent(data.magnetLink, sendStatusUpdate, options);
+
+            } else {
+                logMessage('warn', `Unknown message type or missing data from ${clientIp}: ${JSON.stringify(data)}`);
+                if (ws.readyState === ws.OPEN) ws.send(JSON.stringify({ type: 'error', message: 'Unknown request type or missing data.' }));
+                return;
+            }
+
+            // 3. انتظار النتيجة والتعامل معها
+            if (torrentPromise) {
+                const result = await torrentPromise;
+
+                if (ws.readyState !== ws.OPEN) {
+                    logMessage('warn', `WS closed for ${clientIp} before processing finished for ${result?.fileId}. Cleaning up new torrent.`);
+                    if (result?.success && result.fileId) {
+                        await torrentManager.cleanup(result.fileId);
+                    }
+                    return;
+                }
+
+                if (result.success) {
+                    currentFileId = result.fileId; // *** تعيين المعرف النشط الجديد ***
+
+                    logMessage('info', `Torrent added successfully for ${clientIp}. File ID: ${currentFileId}, Video: ${result.fileName} (Index: ${result.videoFileIndex})`);
+
+                    // *** إرسال المعلومات الشاملة للعميل ***
+                    ws.send(JSON.stringify({
+                        type: 'videoInfo',
+                        url: `/stream/${result.fileId}`,
+                        fileName: result.fileName,          // اسم الفيديو المشغل
+                        fileId: result.fileId,              // المعرف الفريد للبث
+                        videoFileIndex: result.videoFileIndex, // فهرس الفيديو المشغل فعليًا
+                        videoFiles: result.videoFiles,      // كل ملفات الفيديو المتاحة [{name, length, index}]
+                        subtitleFiles: result.subtitleFiles, // ملفات الترجمة المتاحة [{name, index}]
+                        allFiles: result.allFiles           // كل الملفات [{name, length, index}]
+                    }));
+                } else {
+                     logMessage('error', `Torrent add failed for ${clientIp}.`);
+                     if (ws.readyState === ws.OPEN) ws.send(JSON.stringify({ type: 'error', message: result.error || 'Failed to add torrent.' }));
+                     currentFileId = null; // Ensure no active ID if failed
+                }
+            }
+        } catch (error) {
+            logMessage('error', `Error processing message for ${clientIp}: ${error.message}`);
+            logMessage('debug', error.stack);
+            if (ws.readyState === ws.OPEN) {
+                ws.send(JSON.stringify({ type: 'error', message: `Server error: ${error.message}` }));
+            }
+             // No need to cleanup here as cleanup happens *before* add attempts
+        }
+    });
+
+    // --- معالجة إغلاق الاتصال ---
+    ws.on('close', async (code, reason) => {
+        const reasonMsg = reason ? reason.toString('utf8') : 'No reason given';
+        const wasClean = code === 1000 || code === 1001 || code === 1005; // Common clean codes
+        logMessage('ws', `Client disconnected ${clientIp}. Code: ${code}, Reason: "${reasonMsg}", Clean: ${wasClean}`);
+        const idToClean = currentFileId; // Capture ID before clearing
+        currentFileId = null; // Clear active ID for this closed connection
+        if (idToClean) {
+            logMessage('info', `Cleaning up torrent ${idToClean} for disconnected client ${clientIp}.`);
+            await torrentManager.cleanup(idToClean); // Use captured ID
+        } else {
+            logMessage('debug', `Client ${clientIp} disconnected without an active torrent to clean.`);
+        }
+    });
+
+    // --- معالجة أخطاء الاتصال ---
+    ws.on('error', (error) => {
+         logMessage('error', `WebSocket error for ${clientIp}: ${error.message}`);
+         // The 'close' event will likely follow, triggering cleanup.
+         // Avoid redundant cleanup here unless necessary.
+         // If cleanup needed here, capture currentFileId before clearing it.
+         const idToCleanOnError = currentFileId;
+         currentFileId = null; // Assume connection is lost
+         if (idToCleanOnError) {
+             logMessage('warn', `Cleaning up torrent ${idToCleanOnError} due to WebSocket error for ${clientIp}.`);
+             torrentManager.cleanup(idToCleanOnError).catch(cleanupErr => {
+                 logMessage('error', `Error during cleanup after WS error: ${cleanupErr.message}`);
+             });
+         }
+    });
+
+    // --- رسالة الترحيب ---
+    if (ws.readyState === ws.OPEN) {
+         ws.send(JSON.stringify({ type: 'info', message: 'أهلاً بك! أدخل رابط ماجنت أو اختر ملف تورنت للبدء.' }));
+    }
 });
 
-const activeTorrents = new Map();
-const torrentAccessCount = new Map();
+// --- نقاط نهاية HTTP (stream, subtitles) ---
+app.get('/stream/:fileId', async (req, res) => {
+    // ... (نفس كود نقطة نهاية /stream السابق، يعتمد على getVideoFile/getVideoStream المُحسَّن) ...
+     const fileId = req.params.fileId;
+    const range = req.headers.range;
+    logMessage('info', `Stream request for fileId: ${fileId}${range ? ` Range: ${range}` : ''}`);
 
-let currentTorrentHash = null;
+    // getVideoStream now includes checks for destroyed torrents
+    const videoStream = torrentManager.getVideoStream(fileId); // Get stream first to ensure validity
 
-app.use(express.static('public', {
-  maxAge: '1d',
-  etag: false
-}));
+    if (!videoStream) {
+        // getVideoStream handles logging the reason (not found or destroyed)
+        return res.status(404).send('Video stream not available or session expired.');
+    }
 
-const getMimeType = (filename) => {
-  if (filename.endsWith('.mp4')) return 'video/mp4';
-  if (filename.endsWith('.mkv')) return 'video/x-matroska';
-  return 'application/octet-stream';
-};
+    // If stream is valid, get the file object to read size (should still exist if stream is valid)
+    const videoFile = torrentManager.getVideoFile(fileId);
+     if (!videoFile) {
+         // This case should be rare if getVideoStream succeeded, but handle defensively
+         logMessage('error', `Stream Error: videoFile object missing for ${fileId} even though stream was obtained.`);
+         if (!videoStream.destroyed) videoStream.destroy(); // Clean up the obtained stream
+         return res.status(500).send('Internal server error retrieving file details.');
+     }
 
-function parseRange(range, fileSize) {
-  if (!range) return { start: 0, end: fileSize - 1 };
 
-  const parts = range.replace(/bytes=/, '').trim().split('-');
-  let start = parseInt(parts[0], 10);
-  let end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+    const fileSize = videoFile.length;
+    const mimeType = getVideoMimeType(videoFile.name);
+    let streamOptions = {}; // Options passed to createReadStream *inside* getVideoStream
+    let responseHeaders = { 'Accept-Ranges': 'bytes', 'Content-Type': mimeType };
+    let statusCode = 200;
 
-  if (isNaN(start) || start < 0) start = 0;
-  if (isNaN(end) || end >= fileSize) end = fileSize - 1;
+    if (range) {
+        const parts = range.replace(/bytes=/, "").split("-");
+        const start = parseInt(parts[0], 10);
+        const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
 
-  if (start > end) {
-    logMessage("warn", 'Invalid range: start is greater than end. Streaming full file.');
-    start = 0;
-    end = fileSize - 1;
-  }
-  return { start, end };
+        if (start >= fileSize || end >= fileSize || start < 0 || end < 0 || start > end) {
+            logMessage('warn', `Invalid range: ${range} for size ${fileSize}`);
+            res.setHeader('Content-Range', `bytes */${fileSize}`);
+             if (!videoStream.destroyed) videoStream.destroy(); // Destroy unused stream
+            return res.status(416).send('Range Not Satisfiable');
+        }
+
+        const chunksize = (end - start) + 1;
+        streamOptions = { start, end }; // Store options to potentially pass again if needed
+        responseHeaders['Content-Range'] = `bytes ${start}-${end}/${fileSize}`;
+        responseHeaders['Content-Length'] = chunksize;
+        statusCode = 206;
+        logMessage('debug', `Serving range ${start}-${end} (${chunksize} bytes) for ${fileId}`);
+
+         // Re-get the stream with range options (more correct with webtorrent)
+         const rangedStream = torrentManager.getVideoStream(fileId, streamOptions);
+          if (!rangedStream) {
+              logMessage('error', `Stream Error: Failed to create *ranged* stream for ${fileId}`);
+               if (!videoStream.destroyed) videoStream.destroy(); // Destroy original stream
+              return res.status(500).send('Error creating ranged video stream.');
+          }
+           // Destroy the initial full stream if we created a new ranged one
+           if (!videoStream.destroyed) videoStream.destroy();
+           // Use the ranged stream from now on
+           pipeStreamToResponse(rangedStream, res, req, fileId, statusCode, responseHeaders);
+
+
+    } else {
+        responseHeaders['Content-Length'] = fileSize;
+        statusCode = 200;
+        logMessage('debug', `Serving full file (${fileSize} bytes) for ${fileId}`);
+        // Pipe the initially obtained full stream
+         pipeStreamToResponse(videoStream, res, req, fileId, statusCode, responseHeaders);
+    }
+});
+
+// Helper function to pipe stream and handle events
+function pipeStreamToResponse(stream, res, req, fileId, statusCode, headers) {
+     res.writeHead(statusCode, headers);
+
+     req.on('close', () => {
+        logMessage('warn', `Client closed stream connection for ${fileId}. Destroying stream.`);
+        if (stream && !stream.destroyed) {
+            stream.destroy();
+        }
+    });
+
+    stream.pipe(res).on('error', (streamErr) => {
+        logMessage('error', `Error piping stream for ${fileId}: ${streamErr.message}`);
+        if (stream && !stream.destroyed) {
+            stream.destroy();
+        }
+        if (!res.headersSent) {
+            res.status(500).send('Streaming error occurred.');
+        } else if (!res.writableEnded) {
+             // Try to end the response if possible
+             res.end();
+        }
+    }).on('finish', () => {
+        logMessage('debug', `Piping finished successfully for ${fileId}`);
+    });
 }
 
-const sendStream = (torrent, file, range, res, customRange = null) => {
-  let startByte = 0;
-  let endByte = file.length - 1;
-  let statusCode = 200;
 
-  if (customRange) {
-    startByte = customRange.startByte;
-    endByte = customRange.endByte;
-    statusCode = 206;
-    res.set('Content-Range', `bytes ${startByte}-${endByte}/${file.length}`);
-    res.set('Accept-Ranges', 'bytes');
-  } else if (range) {
+app.get('/subtitles/:fileId/:index', async (req, res) => {
+    // ... (نفس كود نقطة نهاية /subtitles السابق، يعتمد على getSubtitleFile المُحسَّن) ...
+     const { fileId, index: indexStr } = req.params;
+    const index = parseInt(indexStr, 10);
+
+    if (isNaN(index) || index < 0) {
+        logMessage('warn', `Invalid subtitle index: ${indexStr} for fileId: ${fileId}`);
+        return res.status(400).send('Invalid subtitle index.');
+    }
+
+    logMessage('info', `Subtitle request for fileId: ${fileId}, index: ${index}`);
+    const subtitleFile = torrentManager.getSubtitleFile(fileId, index); // Use the index directly
+
+    if (!subtitleFile) {
+        logMessage('warn', `Subtitle not found for fileId: ${fileId}, index: ${index}`);
+        return res.status(404).send('Subtitle file not found or session expired.');
+    }
+
+    const isSrt = subtitleFile.name.toLowerCase().endsWith('.srt');
+    logMessage('debug', `Serving subtitle: ${subtitleFile.name} (${isSrt ? 'SRT' : 'VTT'})`);
+    res.setHeader('Content-Type', 'text/vtt; charset=utf-8');
+
     try {
-      const parsed = parseRange(range, file.length);
-      startByte = parsed.start;
-      endByte = parsed.end;
-      statusCode = 206;
-      res.set('Content-Range', `bytes ${startByte}-${endByte}/${file.length}`);
-      res.set('Accept-Ranges', 'bytes');
-    } catch (err) {
-      logMessage("error", `Error parsing range: ${err}`);
-      return res.status(416).send('Requested Range Not Satisfiable');
-    }
-  }
-
-  res.set('Content-Type', getMimeType(file.name));
-  res.status(statusCode);
-
-  if (torrent._currentReadStream) {
-    torrent._currentReadStream.destroy();
-  }
-
-  const readStream = file.createReadStream({ start: startByte, end: endByte });
-  torrent._currentReadStream = readStream;
-  pipeline(readStream, res, (err) => {
-    if (err && err.code !== 'ERR_STREAM_PREMATURE_CLOSE') {
-      logMessage("error", `Stream error: ${err}`);
-    }
-    torrent._currentReadStream = null;
-  });
-};
-
-const handleTorrent = (torrent, range, res, fileIndex = 0, startMinute = null, endMinute = null) => {
-  torrent.lastAccess = Date.now();
-
-  const videoFiles = torrent.files.filter(f => f.name.endsWith('.mp4') || f.name.endsWith('.mkv'));
-  if (videoFiles.length === 0) {
-    return res.status(404).send('No MP4 or MKV video found in this torrent.');
-  }
-  if (fileIndex < 0 || fileIndex >= videoFiles.length) {
-    return res.status(400).send('Invalid fileIndex parameter.');
-  }
-  const selectedFile = videoFiles[fileIndex];
-
-  // في حال وجود أكثر من ملف فيديو، يتم تحديد الملف المطلوب وتحميله فقط
-  if (videoFiles.length > 1) {
-    const totalPieces = Math.ceil(torrent.length / torrent.pieceLength);
-    torrent.deselect(0, totalPieces - 1, 0);
-
-    torrent.files.forEach(file => {
-      const startPiece = Math.floor(file.offset / torrent.pieceLength);
-      const endPiece = Math.ceil((file.offset + file.length) / torrent.pieceLength) - 1;
-      if (file === selectedFile) {
-        torrent.select(startPiece, endPiece, 0);
-        file.select();
-      } else {
-        torrent.deselect(startPiece, endPiece, 0);
-      }
-    });
-  }
-
-  if (torrent._lastFileIndex !== fileIndex) {
-    logMessage("info", `Streaming file: "${selectedFile.name}" from torrent: "${torrent.name}"`);
-    torrent._lastFileIndex = fileIndex;
-  }
-
-  let customRange = null;
-  if (startMinute !== null) {
-    const startMin = parseFloat(startMinute);
-    const endMin = endMinute ? parseFloat(endMinute) : null;
-    if (endMin !== null && startMin > endMin) {
-      return res.status(416).send('Invalid minute range: startMinute is greater than endMinute');
-    }
-    const DEFAULT_VIDEO_DURATION = 7200;
-    const startTimeSec = startMin * 60;
-    const endTimeSec = endMin ? endMin * 60 : DEFAULT_VIDEO_DURATION;
-    customRange = {
-      startByte: Math.floor(selectedFile.length * (startTimeSec / DEFAULT_VIDEO_DURATION)),
-      endByte: Math.floor(selectedFile.length * (endTimeSec / DEFAULT_VIDEO_DURATION))
-    };
-  }
-
-  sendStream(torrent, selectedFile, range, res, customRange);
-};
-
-const removeTorrent = (torrentHash) => {
-  if (activeTorrents.has(torrentHash)) {
-    const torrent = activeTorrents.get(torrentHash);
-    client.remove(torrentHash, (err) => {
-      if (err) {
-        logMessage("error", `Error removing torrent: ${err}`);
-      } else {
-        activeTorrents.delete(torrentHash);
-        torrentAccessCount.delete(torrentHash);
-        console.clear();
-        logMessage("warn", `Closed torrent: "${torrent.name}"`);
-        const downloadPath = path.join('downloads', torrentHash);
-        fs.rm(downloadPath, { recursive: true, force: true }, (err) => {
-          if (err) {
-            logMessage("error", `Error removing download folder for torrent "${torrent.name}": ${err}`);
-          } else {
-            logMessage("debug", `Removed download folder: "${downloadPath}"`);
-          }
-          setTimeout(() => {
-            console.clear();
-          }, 2000);
+        const sourceStream = subtitleFile.createReadStream();
+        sourceStream.on('error', (err) => {
+            logMessage('error', `Error reading subtitle stream (${subtitleFile.name}): ${err.message}`);
+            if (!res.headersSent) res.status(500).send('Error reading subtitle.'); else if (!res.writableEnded) res.end();
         });
-      }
-    });
-  }
-};
 
-const addTorrentIfNotExist = (magnetLink, res, range, fileIndex = 0, startMinute = null, endMinute = null) => {
-  let parsedMagnet;
-  try {
-    parsedMagnet = magnetUri(magnetLink);
-  } catch (error) {
-    logMessage("error", `Error parsing magnet URI: ${error}`);
-    return res.status(400).send('Invalid Magnet link.');
-  }
-  const torrentHash = parsedMagnet.infoHash;
+        req.on('close', () => {
+            logMessage('warn', `Client closed subtitle connection for ${subtitleFile.name}.`);
+            if (sourceStream && !sourceStream.destroyed) sourceStream.destroy();
+        });
 
-  activeTorrents.forEach((torrent, key) => {
-    if (key !== torrentHash) {
-      removeTorrent(key);
-    }
-  });
-  currentTorrentHash = torrentHash;
-
-  const currentCount = torrentAccessCount.get(torrentHash) || 0;
-  torrentAccessCount.set(torrentHash, currentCount + 1);
-
-  if (activeTorrents.has(torrentHash)) {
-    const torrent = activeTorrents.get(torrentHash);
-    torrent.lastAccess = Date.now();
-    if (!torrent._loggedResumed) {
-      logMessage("info", `Resuming streaming torrent: "${torrent.name}"`);
-      torrent._loggedResumed = true;
-    }
-    handleTorrent(torrent, range, res, parseInt(fileIndex, 10), startMinute, endMinute);
-  } else {
-    logMessage("info", 'Adding new torrent...');
-    client.add(magnetLink, { path: path.join('downloads', torrentHash) }, (torrent) => {
-      torrent.removeAllListeners();
-      torrent.setMaxListeners(100);
-      torrent.on('error', (err) => {
-        logMessage("error", `Torrent error: ${err}`);
-        if (!res.headersSent) {
-          res.status(500).send('An error occurred while processing the torrent.');
+        if (isSrt) {
+            const converterStream = srt2vtt();
+            converterStream.on('error', (err) => {
+                logMessage('error', `SRT conversion error (${subtitleFile.name}): ${err.message}`);
+                if (sourceStream && !sourceStream.destroyed) sourceStream.destroy();
+                if (!res.headersSent) res.status(500).send('Error converting subtitle.'); else if (!res.writableEnded) res.end();
+            });
+            sourceStream.pipe(converterStream).pipe(res);
+        } else {
+            sourceStream.pipe(res);
         }
-      });
-      torrent.lastAccess = Date.now();
-      activeTorrents.set(torrentHash, torrent);
-      logMessage("info", `Started streaming torrent: "${torrent.name}"`);
-      handleTorrent(torrent, range, res, parseInt(fileIndex, 10), startMinute, endMinute);
-    });
-  }
-};
-
-app.get('/stream', (req, res) => {
-  const magnet = req.query.magnet;
-  const fileIndex = req.query.fileIndex || 0;
-  const range = req.headers.range;
-  const startMinute = req.query.startMinute || null;
-  const endMinute = req.query.endMinute || null;
-  if (!magnet) {
-    return res.status(400).send('Please provide a Magnet link.');
-  }
-  addTorrentIfNotExist(magnet, res, range, fileIndex, startMinute, endMinute);
-});
-
-app.get('/torrent-info', (req, res) => {
-  const magnet = req.query.magnet;
-  if (!magnet) {
-    return res.status(400).json({ error: 'Please provide a Magnet link.' });
-  }
-  let parsedMagnet;
-  try {
-    parsedMagnet = magnetUri(magnet);
-  } catch (error) {
-    logMessage("error", `Error parsing magnet URI: ${error}`);
-    return res.status(400).json({ error: 'Invalid Magnet link.' });
-  }
-  const torrentHash = parsedMagnet.infoHash;
-  if (activeTorrents.has(torrentHash)) {
-    const torrent = activeTorrents.get(torrentHash);
-    const accessCount = torrentAccessCount.get(torrentHash) || 0;
-    let seeds = 0;
-    let leechers = 0;
-    if (torrent.swarm && torrent.swarm.wires) {
-      seeds = torrent.swarm.wires.filter(w => !w.peerChoking).length;
-      leechers = torrent.numPeers - seeds;
+    } catch (error) {
+        logMessage('error', `Unexpected error serving subtitle ${subtitleFile.name}: ${error.message}`);
+        if (!res.headersSent) res.status(500).send('Server error serving subtitle.'); else if (!res.writableEnded) res.end();
     }
-    const info = {
-      name: torrent.name,
-      infoHash: torrent.infoHash,
-      magnetURI: torrent.magnetURI,
-      accessCount: accessCount,
-      numPeers: torrent.numPeers,
-      seeds: seeds,
-      leechers: leechers,
-      progress: torrent.progress,
-      files: torrent.files.map((f, index) => ({
-        index,
-        name: f.name,
-        length: f.length,
-        progress: f.length ? (f.downloaded || 0) / f.length : 0
-      }))
-    };
-    return res.json(info);
-  } else {
-    return res.status(404).json({ error: 'Torrent is not active currently.' });
-  }
 });
 
-app.get('/torrent/pause', (req, res) => {
-  const magnet = req.query.magnet;
-  if (!magnet) {
-    return res.status(400).json({ error: 'Please provide a Magnet link.' });
-  }
-  let parsedMagnet;
-  try {
-    parsedMagnet = magnetUri(magnet);
-  } catch (error) {
-    logMessage("error", `Error parsing magnet URI: ${error}`);
-    return res.status(400).json({ error: 'Invalid Magnet link.' });
-  }
-  const torrentHash = parsedMagnet.infoHash;
-  if (activeTorrents.has(torrentHash)) {
-    const torrent = activeTorrents.get(torrentHash);
-    if (torrent.pause) {
-      torrent.pause();
-      return res.json({ message: 'Torrent paused successfully.' });
-    } else {
-      torrent.files.forEach(file => file.deselect());
-      torrent._paused = true;
-      return res.json({ message: 'Torrent paused (simulated).' });
-    }
-  } else {
-    return res.status(404).json({ error: 'Torrent is not active.' });
-  }
+// --- دالة مساعدة لتحديد نوع MIME ---
+function getVideoMimeType(fileName = '') { /* ... نفس الدالة ... */
+     const lowerCaseName = fileName.toLowerCase();
+    if (lowerCaseName.endsWith('.mp4')) return 'video/mp4';
+    if (lowerCaseName.endsWith('.webm')) return 'video/webm';
+    if (lowerCaseName.endsWith('.mkv')) return 'video/mp4';
+    if (lowerCaseName.endsWith('.mov')) return 'video/quicktime';
+    if (lowerCaseName.endsWith('.avi')) return 'video/x-msvideo';
+    return 'video/mp4';
+}
+
+// --- بدء تشغيل الخادم ---
+const PORT = process.env.PORT || 4000;
+server.listen(PORT, () => {
+    logMessage('info', `Server running on http://localhost:${PORT}`);
+    logMessage('info', 'WebSocket server ready.');
 });
 
-app.get('/torrent/resume', (req, res) => {
-  const magnet = req.query.magnet;
-  if (!magnet) {
-    return res.status(400).json({ error: 'Please provide a Magnet link.' });
-  }
-  let parsedMagnet;
-  try {
-    parsedMagnet = magnetUri(magnet);
-  } catch (error) {
-    logMessage("error", `Error parsing magnet URI: ${error}`);
-    return res.status(400).json({ error: 'Invalid Magnet link.' });
-  }
-  const torrentHash = parsedMagnet.infoHash;
-  if (activeTorrents.has(torrentHash)) {
-    const torrent = activeTorrents.get(torrentHash);
-    if (torrent.resume) {
-      torrent.resume();
-      return res.json({ message: 'Torrent resumed successfully.' });
-    } else {
-      torrent.files.forEach(file => file.select());
-      torrent._paused = false;
-      return res.json({ message: 'Torrent resumed (simulated).' });
-    }
-  } else {
-    return res.status(404).json({ error: 'Torrent is not active.' });
-  }
-});
-
-app.get('/torrent/remove', (req, res) => {
-  const magnet = req.query.magnet;
-  if (!magnet) {
-    return res.status(400).json({ error: 'Please provide a Magnet link.' });
-  }
-  let parsedMagnet;
-  try {
-    parsedMagnet = magnetUri(magnet);
-  } catch (error) {
-    logMessage("error", `Error parsing magnet URI: ${error}`);
-    return res.status(400).json({ error: 'Invalid Magnet link.' });
-  }
-  const torrentHash = parsedMagnet.infoHash;
-  if (!activeTorrents.has(torrentHash)) {
-    return res.status(404).json({ error: 'Torrent is not active.' });
-  }
-  removeTorrent(torrentHash);
-  return res.json({ message: 'Torrent removed successfully.' });
-});
-
-// استخدام متغير البيئة للمنفذ؛ Render ستحدد المنفذ من خلال process.env.PORT
-const PORT = process.env.PORT;
-app.listen(PORT, () => {
-  logMessage("info", `Server running on http://localhost:${PORT}`);
-});
+// --- معالجة إيقاف التشغيل النظيف ---
+process.on('SIGINT', handleShutdown);
+process.on('SIGTERM', handleShutdown);
+async function handleShutdown() { /* ... نفس الدالة ... */
+     logMessage('warn', 'Shutdown signal received. Closing server gracefully...');
+    let exitCode = 0;
+    try {
+        logMessage('info', 'Closing WebSocket connections...');
+        await new Promise(resolve => { wss.close(() => { logMessage('info', 'WebSocket server closed.'); resolve(); }); setTimeout(() => { logMessage('warn', 'Forcibly terminating remaining WS connections.'); wss.clients.forEach(client => { if (client.readyState === WebSocket.OPEN) client.terminate(); }); resolve(); }, 3000); });
+        logMessage('info', 'Closing HTTP server...');
+        await new Promise(resolve => server.close(resolve)); logMessage('info', 'HTTP server closed.');
+        logMessage('info', 'Cleaning up active torrents...');
+        const cleanupPromises = Array.from(torrentManager.torrents.keys()).map(fileId => { logMessage('warn', `Cleaning up torrent ${fileId} during shutdown.`); return torrentManager.cleanup(fileId).catch(err => logMessage('error', `Error cleaning up ${fileId}: ${err.message}`)); });
+        await Promise.all(cleanupPromises); logMessage('info', 'Active torrents cleaned up.');
+        logMessage('info', 'Destroying WebTorrent client...');
+        await new Promise(resolve => torrentManager.client.destroy(resolve)); logMessage('info', 'WebTorrent client destroyed.');
+    } catch (err) { logMessage('error', `Error during graceful shutdown: ${err.message}`); exitCode = 1; }
+    finally { logMessage('info', `Shutdown complete. Exiting with code ${exitCode}.`); process.exit(exitCode); }
+}
