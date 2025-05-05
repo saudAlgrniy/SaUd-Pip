@@ -602,9 +602,8 @@
     </div>
 
 <!-- المحتوى الرئيسي (يظهر بعد التحميل) -->
-<!-- تم تعديل هيكل Grid وتنسيقات الحاويات -->
 <div id="mainContent">
-  <!-- منطقة الفيديو (أصبحت أضيق على الشاشات الكبيرة) -->
+  <!-- منطقة الفيديو -->
   <div class="content">
     <div id="videoContainer">
       <video id="videoPlayer" controls crossorigin playsinline>
@@ -623,12 +622,11 @@
     </div>
   </div>
 
-  <!-- الشريط الجانبي (أصبح أعرض وبدون تمرير داخلي) -->
+  <!-- الشريط الجانبي -->
   <div class="sidebar">
      <div id="torrentDetails">
         <h3>TORRENT_INFO</h3>
         <div id="torrentInfo">
-            <!-- تم تعديل CSS للتعامل مع النصوص الطويلة هنا -->
             <p><strong>NAME:</strong> <span id="torrentName">...</span></p>
             <p><strong>FILE_ID:</strong> <span id="torrentFileId">...</span></p>
             <p><strong>PEERS:</strong> <span id="torrentPeers">0</span> (<i class="fa-solid fa-arrow-up" style="color:var(--success-color);"></i><span id="torrentSeeds">0</span> <i class="fa-solid fa-arrow-down" style="color:var(--warning-color);"></i><span id="torrentLeechers">0</span>)</p>
@@ -676,559 +674,865 @@
         <label for="colorInput">SUBTITLE_COLOR</label>
         <input type="color" id="colorInput" value="#ffffff" aria-label="اختر لون الخط">
       </div>
+      <!-- ***************** START: SRT File Upload Section ***************** -->
+      <div class="popup-section">
+          <label for="srtFileInput">LOAD_LOCAL_SRT_FILE:</label>
+          <input type="file" id="srtFileInput" accept=".srt">
+      </div>
+      <!-- ***************** END: SRT File Upload Section ***************** -->
     </div>
 </div>
 
 <!-- Plyr JS -->
-<script src="https://cdn.plyr.io/3.7.2/plyr.polyfilled.js"></script>
+<script src="https://cdn.plyr.io/3.7.2/plyr.polyfilled.js"></script><script>// --- عناصر الواجهة ---
+const magnetLinkInput = document.getElementById('magnetLink');
+const torrentFileInput = document.getElementById('torrentFile');
+const loaderElement = document.getElementById('loader');
+const statusTextElement = document.getElementById('statusText');
+const errorMessageElement = document.getElementById('errorMessage');
+const inputSection = document.getElementById('inputSection');
+const mainContentElement = document.getElementById('mainContent');
+const videoContainerElement = document.getElementById('videoContainer');
+const videoSelectElement = document.getElementById('videoSelect');
+const videoSelectionContainer = document.getElementById('videoSelection');
+const filesTreeViewElement = document.getElementById('filesTreeView');
+const torrentNameElement = document.getElementById('torrentName');
+const torrentFileIdElement = document.getElementById('torrentFileId');
+const torrentPeersElement = document.getElementById('torrentPeers');
+const torrentSeedsElement = document.getElementById('torrentSeeds');
+const torrentLeechersElement = document.getElementById('torrentLeechers');
+const torrentDownloadSpeedElement = document.getElementById('torrentDownloadSpeed');
+const torrentUploadSpeedElement = document.getElementById('torrentUploadSpeed');
+const progressBarFill = document.querySelector('#torrentProgressBar .progress-bar-fill');
+const progressPercentElement = document.getElementById('progressPercent');
+const subtitleCountElement = document.getElementById('subtitleCount');
+const subtitleListElement = document.getElementById('subtitleList');
+const themeToggleButton = document.getElementById('theme-toggle');
+const bodyElement = document.body;
+const srtFileInputElement = document.getElementById('srtFileInput');
 
-<script>
-    // --- عناصر الواجهة ---
-    const magnetLinkInput = document.getElementById('magnetLink');
-    const torrentFileInput = document.getElementById('torrentFile');
-    const loaderElement = document.getElementById('loader');
-    const statusTextElement = document.getElementById('statusText');
-    const errorMessageElement = document.getElementById('errorMessage');
-    const inputSection = document.getElementById('inputSection');
-    const mainContentElement = document.getElementById('mainContent');
-    const videoContainerElement = document.getElementById('videoContainer');
-    const videoSelectElement = document.getElementById('videoSelect');
-    const videoSelectionContainer = document.getElementById('videoSelection');
-    const filesTreeViewElement = document.getElementById('filesTreeView');
-    const torrentNameElement = document.getElementById('torrentName');
-    const torrentFileIdElement = document.getElementById('torrentFileId');
-    const torrentPeersElement = document.getElementById('torrentPeers');
-    const torrentSeedsElement = document.getElementById('torrentSeeds');
-    const torrentLeechersElement = document.getElementById('torrentLeechers');
-    const torrentDownloadSpeedElement = document.getElementById('torrentDownloadSpeed');
-    const torrentUploadSpeedElement = document.getElementById('torrentUploadSpeed');
-    const progressBarFill = document.querySelector('#torrentProgressBar .progress-bar-fill');
-    const progressPercentElement = document.getElementById('progressPercent');
-    const subtitleCountElement = document.getElementById('subtitleCount');
-    const subtitleListElement = document.getElementById('subtitleList');
-    const themeToggleButton = document.getElementById('theme-toggle');
-    const bodyElement = document.body;
+let player = null;
 
-    const player = new Plyr('#videoPlayer', {
-        captions: { active: true, language: 'auto', update: true }
-        // Additional Plyr options can be added here if needed
-    });
+// --- حالة التطبيق ---
+let ws = null;
+let currentFileId = null;
+let currentVideoUrl = null;
+let currentFileName = '';
+let currentRequestData = null;
+let currentVideoIndex = 0;
+let allVideoFiles = [];
+let allSubtitleFiles = [];
+let allFilesData = [];
+let subtitleFontSize = 20;
+const WS_URL = `wws://${window.location.host}`;
+let wsReconnectAttempts = 0;
+const MAX_WS_RECONNECT_ATTEMPTS = 5;
+let wsReconnectTimeout = null;
+let currentLocalSubBlobUrl = null;
 
-    // --- حالة التطبيق ---
-    let ws = null;
-    let currentFileId = null;
-    let currentVideoUrl = null;
-    let currentFileName = '';
-    let currentRequestData = null;
-    let currentVideoIndex = 0;
-    let allVideoFiles = [];
-    let allFilesData = [];
-    let subtitleFontSize = 20;
-    const WS_URL = `wss://${window.location.host}`;
+// --- تهيئة الواجهة ---
+document.addEventListener('DOMContentLoaded', () => {
+    initializePlayer();
+    torrentFileInput.addEventListener('change', handleFileSelectChange);
+    document.getElementById('colorInput').addEventListener('input', handleColorInputChange);
+    themeToggleButton.addEventListener('click', toggleTheme);
+    initializeTheme();
+    updateSubtitleDisplay();
+    document.addEventListener('visibilitychange', handleVisibilityChange);
 
-    // --- تهيئة الواجهة ---
-    document.addEventListener('DOMContentLoaded', () => {
-        torrentFileInput.addEventListener('change', handleFileSelectChange);
-        document.getElementById('colorInput').addEventListener('input', handleColorInputChange);
-        themeToggleButton.addEventListener('click', toggleTheme);
-        initializeTheme(); // Set initial theme based on preference or system
-        updateSubtitleDisplay();
-    });
-
-    // --- Theme Switching ---
-    function initializeTheme() {
-        const savedTheme = localStorage.getItem('theme') || 'dark'; // Default to dark
-        // Optional: Check system preference if no saved theme
-        // const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-        // const initialTheme = localStorage.getItem('theme') || (prefersDark ? 'dark' : 'light');
-
-        if (savedTheme === 'light') {
-            bodyElement.classList.add('light-mode');
-            themeToggleButton.innerHTML = '<i class="fa-solid fa-moon"></i>'; // Show moon icon in light mode
-        } else {
-            bodyElement.classList.remove('light-mode');
-            themeToggleButton.innerHTML = '<i class="fa-solid fa-sun"></i>'; // Show sun icon in dark mode
-        }
-        // Update subtitle color picker initial value based on theme
-        document.getElementById('colorInput').value = getComputedStyle(document.documentElement).getPropertyValue('--subtitle-color').trim();
+    if (srtFileInputElement) {
+        srtFileInputElement.addEventListener('change', handleSrtFileSelect);
+    } else {
+        console.error("SRT file input element (#srtFileInput) not found in the HTML!");
     }
+});
 
-    function toggleTheme() {
-        bodyElement.classList.toggle('light-mode');
-        const isLightMode = bodyElement.classList.contains('light-mode');
-        localStorage.setItem('theme', isLightMode ? 'light' : 'dark');
-
-        if (isLightMode) {
-            themeToggleButton.innerHTML = '<i class="fa-solid fa-moon"></i>';
-        } else {
-            themeToggleButton.innerHTML = '<i class="fa-solid fa-sun"></i>';
-        }
-        // Update subtitle color picker value when theme changes
-         document.getElementById('colorInput').value = getComputedStyle(document.documentElement).getPropertyValue('--subtitle-color').trim();
-    }
-
-
-    function handleFileSelectChange() {
-        if (torrentFileInput.files.length > 0) {
-            torrentFileInput.dataset.placeholder = `// ${torrentFileInput.files[0].name}`;
-            torrentFileInput.classList.add('file-has-value');
-            torrentFileInput.classList.remove('file-placeholder');
-        } else {
-            torrentFileInput.dataset.placeholder = "// DROP .TORRENT FILE";
-            torrentFileInput.classList.remove('file-has-value');
-            torrentFileInput.classList.add('file-placeholder');
-        }
-    }
-
-    function handleColorInputChange(event) {
-        document.documentElement.style.setProperty('--subtitle-color', event.target.value);
-    }
-
-    function updateSubtitleDisplay() {
-        document.getElementById('fontSizeDisplay').textContent = subtitleFontSize;
-        document.documentElement.style.setProperty('--subtitle-font-size', `${subtitleFontSize}px`);
-    }
-
-    // --- دوال WebSocket (No changes needed from previous version) ---
-    function connectWebSocket(onOpenCallback, initialRequestData) {
-        if (ws && ws.readyState === WebSocket.OPEN) {
-            console.warn('WS open. Closing before reconnect.');
-            ws.onclose = null;
-            ws.close(1000, "Starting new request");
-        }
-
-        showLoader('CONNECTING_TO_GRID...');
-        hideError();
-        currentRequestData = initialRequestData; // Store request for potential re-request
-
-        ws = new WebSocket(WS_URL);
-
-        ws.onopen = () => {
-            console.log('WS connected.');
-            statusTextElement.textContent = 'CONNECTION_ESTABLISHED. SENDING_REQUEST...';
-            if (onOpenCallback) onOpenCallback();
-        };
-
-        ws.onmessage = (event) => {
-            try {
-                const data = JSON.parse(event.data);
-                handleWebSocketMessage(data);
-            } catch (error) {
-                console.error('WS message parse error:', event.data, error);
-                showError('SERVER_DATA_CORRUPT.');
-                hideLoader();
-            }
-        };
-
-        ws.onerror = (error) => {
-            console.error('WS error:', error);
-            showError('SERVER_CONNECTION_FAILED. CHECK_SERVER_STATUS & REFRESH.');
-            hideLoader();
-            resetUI(); // Reset fully on connection error
-        };
-
-        ws.onclose = (event) => {
-            console.log(`WS closed. Code: ${event.code}, Clean: ${event.wasClean}`);
-            const wasIntentional = event.code === 1000 || event.code === 1001;
-            ws = null;
-            if (!wasIntentional) {
-                 console.log('WS closed unexpectedly.');
-                 if (event.code !== 1006) {
-                     showError('SERVER_CONNECTION_LOST_UNEXPECTEDLY.');
-                 }
-                 resetUI();
+// --- دالة فك ترميز SRT ---
+async function decodeSRTFile(file) {
+    console.log("Decoding SRT file:", file.name);
+    try {
+        const buffer = await file.arrayBuffer();
+        try {
+            const utf8Decoder = new TextDecoder('utf-8', { fatal: true });
+            const decoded = utf8Decoder.decode(buffer);
+            console.log("Decoded SRT as UTF-8.");
+            if (decoded.includes('-->')) {
+                return decoded;
             } else {
-                console.log("WS closed intentionally.");
+                console.warn("Decoded as UTF-8, but content doesn't seem like SRT. Trying Windows-1256.");
+                throw new Error("Content doesn't look like SRT");
             }
-             hideLoader(); // Ensure loader is hidden
-        };
-    }
-
-    function sendMessage(message) {
-        if (ws && ws.readyState === WebSocket.OPEN) {
-            console.log('Sending WS message:', message.type, message.videoIndex !== undefined ? `Index: ${message.videoIndex}` : '');
-            ws.send(JSON.stringify(message));
-        } else {
-            console.error('WS not open. Cannot send.');
-            showError('SERVER_CONNECTION_UNAVAILABLE.');
+        } catch (utf8Error) {
+            console.warn("UTF-8 decoding failed or content check failed, trying Windows-1256:", utf8Error.message);
+            const win1256Decoder = new TextDecoder('windows-1256');
+            const decoded = win1256Decoder.decode(buffer);
+            console.log("Decoded SRT as Windows-1256.");
+            return decoded;
         }
+    } catch (error) {
+        console.error("Error reading or decoding SRT file:", error);
+        showError("FAILED_TO_READ_OR_DECODE_SRT");
+        return null;
     }
+}
 
-    function closeWebSocket(code = 1000, reason = "User action") {
-        if (ws) {
-            console.log(`Closing WS manually with code ${code}: ${reason}`);
-            ws.onclose = null; // Prevent default handler
-            ws.close(code, reason);
-            ws = null;
-        }
+// --- تحويل SRT إلى VTT ---
+function convertSrtToVtt(srtText) {
+    console.log("Starting SRT to VTT conversion...");
+    if (!srtText || typeof srtText !== 'string') {
+        console.error("Invalid input to convertSrtToVtt:", srtText);
+        return null;
     }
+    try {
+        let text = srtText.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+        text = text.replace(/^\uFEFF/, '');
+        const blocks = text.split('\n\n');
+        let vttContent = "WEBVTT\n\n";
 
-    // --- معالجة رسائل WebSocket (No changes needed) ---
-    function handleWebSocketMessage(data) {
-        switch (data.type) {
-            case 'videoInfo':
-                handleVideoInfo(data);
-                break;
-            case 'status':
-                handleStatusUpdate(data);
-                break;
-            case 'error':
-                showError(`SERVER_ERROR: ${data.message || 'UNKNOWN_ERROR'}`);
-                hideLoader();
-                break;
-            case 'info':
-                console.log('Server info:', data.message);
-                if (!mainContentElement.classList.contains('visible')) {
-                    statusTextElement.textContent = `INFO: ${data.message}`;
+        blocks.forEach((block, index) => {
+            block = block.trim();
+            if (!block) return;
+
+            const lines = block.split('\n');
+            let timeLine = '';
+            let textLines = [];
+            let timeLineIndex = -1;
+
+            for (let i = 0; i < lines.length; i++) {
+                if (lines[i].includes('-->')) {
+                    timeLineIndex = i;
+                    break;
                 }
-                break;
-            default:
-                console.warn('Unknown WS message type:', data.type, data);
-        }
+            }
+
+            if (timeLineIndex !== -1) {
+                timeLine = lines[timeLineIndex].replace(/,/g, '.').trim();
+                textLines = lines.slice(timeLineIndex + 1).map(line => line.trim()).filter(line => line !== '');
+                if (/^\d{1,2}:\d{2}:\d{2}\.\d{3}\s*-->\s*\d{1,2}:\d{2}:\d{2}\.\d{3}/.test(timeLine)) {
+                    vttContent += `${timeLine}\n${textLines.join('\n')}\n\n`;
+                } else {
+                    console.warn(`Skipping block ${index + 1} due to invalid time format: "${lines[timeLineIndex]}"`);
+                }
+            } else {
+                console.warn(`Skipping block ${index + 1} as no valid timestamp ('-->') found.`);
+            }
+        });
+
+        console.log("SRT to VTT conversion finished.");
+        return vttContent;
+    } catch (error) {
+        console.error("Error during SRT to VTT conversion:", error);
+        showError("SRT_CONVERSION_FAILED.");
+        return null;
     }
+}
 
-    // --- التعامل مع معلومات الفيديو والملفات (No changes needed) ---
-    function handleVideoInfo(data) {
-        console.log('Received videoInfo:', data);
+// --- معالجة اختيار ملف SRT ---
+async function handleSrtFileSelect(event) {
+    const file = event.target.files[0];
+    if (!file) {
+        console.log("No SRT file selected.");
+        return;
+    }
+    if (!file.name.toLowerCase().endsWith('.srt')) {
+        showError("INVALID_FILE_TYPE. PLEASE_SELECT_'.srt'_FILE.");
+        event.target.value = null;
+        return;
+    }
+    if (!player) {
+        console.error("Player not available to add subtitle track.");
+        showError("PLAYER_NOT_READY_FOR_SUBTITLE.");
+        event.target.value = null;
+        return;
+    }
+    const fileName = file.name;
+    event.target.value = null;
+
+    console.log(`SRT file selected: ${fileName}`);
+    showLoader(`LOADING_SUBTITLE: ${fileName}...`);
+
+    try {
+        const decodedText = await decodeSRTFile(file);
+        if (!decodedText) { hideLoader(); return; }
+
+        const vttText = convertSrtToVtt(decodedText);
+        if (!vttText) { hideLoader(); return; }
+
+        revokeLocalSubtitleTrack();
+        const vttBlob = new Blob([vttText], { type: 'text/vtt;charset=UTF-8' });
+        currentLocalSubBlobUrl = URL.createObjectURL(vttBlob);
+        console.log("Created VTT Blob URL:", currentLocalSubBlobUrl);
+
+        const videoElement = player.media;
+        if (!videoElement) {
+            console.error("Video element not found.");
+            showError("PLAYER_NOT_READY_FOR_SUBTITLE.");
+            return;
+        }
+
+        // إزالة المسارات المحلية السابقة
+        const existingTracks = videoElement.querySelectorAll('track[srclang="local-srt"]');
+        existingTracks.forEach(track => track.remove());
+
+        // إنشاء عنصر <track> جديد
+        const trackElement = document.createElement('track');
+        trackElement.kind = 'subtitles';
+        trackElement.label = `Local (${fileName})`;
+        trackElement.srclang = 'local-srt';
+        trackElement.src = currentLocalSubBlobUrl;
+        trackElement.default = true;
+
+        // إضافة المسار إلى عنصر الفيديو
+        videoElement.appendChild(trackElement);
+
+        // انتظار تحميل المسار وتفعيله
+        trackElement.addEventListener('load', () => {
+            console.log("Local subtitle track loaded.");
+            const tracks = videoElement.textTracks;
+            for (let i = 0; i < tracks.length; i++) {
+                tracks[i].mode = (tracks[i].language === 'local-srt') ? 'showing' : 'hidden';
+            }
+            console.log("Set local-srt track to showing.");
+        });
+
+        trackElement.addEventListener('error', (e) => {
+            console.error("Error loading local subtitle track:", e);
+            showError("FAILED_TO_LOAD_LOCAL_SUBTITLE.");
+        });
+
+        console.log("Added local SRT track to video element dynamically.");
+        toggleTranslationPopup();
+
+    } catch (error) {
+        console.error("Error in handleSrtFileSelect:", error);
+        showError(`ERROR_PROCESSING_SRT: ${error.message}`);
+        revokeLocalSubtitleTrack();
+    } finally {
         hideLoader();
-        showMainContent();
+    }
+}
 
-        currentFileId = data.fileId;
-        currentVideoUrl = data.url;
-        currentFileName = data.fileName;
-        currentVideoIndex = data.videoFileIndex;
-        allVideoFiles = data.videoFiles || [];
-        allFilesData = data.allFiles || [];
+// --- تنظيف Blob URL للترجمة المحلية ---
+function revokeLocalSubtitleTrack() {
+    if (currentLocalSubBlobUrl) {
+        URL.revokeObjectURL(currentLocalSubBlobUrl);
+        console.log("Revoked previous local subtitle Blob URL:", currentLocalSubBlobUrl);
+        currentLocalSubBlobUrl = null;
+    }
+}
 
-        torrentNameElement.textContent = data.fileName || 'N/A';
-        torrentFileIdElement.textContent = data.fileId || 'N/A';
+function removeLocalSubtitleTrack() {
+    const videoElement = player?.media;
+    if (videoElement) {
+        const localTracks = videoElement.querySelectorAll('track[srclang="local-srt"]');
+        localTracks.forEach(track => track.remove());
+        console.log("Removed local subtitle track.");
+    }
+    revokeLocalSubtitleTrack();
+}
 
-        populateVideoSelect(allVideoFiles, currentVideoIndex);
-        populateSubtitleList(data.subtitleFiles || [], data.fileId);
-        buildFileTreeView(allFilesData);
+// --- تهيئة المشغل ---
+function initializePlayer() {
+    try {
+        player = new Plyr('#videoPlayer', {
+            debug: false,
+            captions: {
+                active: true,
+                language: 'auto',
+                update: true
+            },
+            i18n: {
+                languages: { en: 'English', ar: 'Arabic', fr: 'French', es: 'Spanish', de: 'German', 'local-srt': 'Local Subtitle' }
+            }
+        });
+        console.log("Plyr player initialized successfully.");
+        player.on('ready', () => console.log('Plyr ready.'));
+        player.on('captionsenabled', () => console.log('Plyr captions enabled.'));
+        player.on('captionsdisabled', () => console.log('Plyr captions disabled.'));
+        player.on('languagechange', event => console.log('Plyr language changed:', event.detail.language));
+        player.on('error', event => console.error('Plyr player error:', event.detail.error));
+        player.on('sourcechange', () => console.log('Plyr source changed.'));
+    } catch (e) {
+        console.error("FATAL: Failed to initialize Plyr player:", e);
+        showError("PLAYER_INITIALIZATION_FAILED. REFRESH_PAGE.");
+    }
+}
 
-        const tracks = (data.subtitleFiles || []).map((sub) => ({
-            kind: 'subtitles',
-            label: sub.name || `Subtitle ${sub.index + 1}`,
-            srclang: guessLanguageCode(sub.name) || `sub${sub.index+1}`,
-            src: `/subtitles/${data.fileId}/${sub.index}`,
-            default: sub.index === 0
-        }));
+// --- التعامل مع تغيير رؤية الصفحة ---
+function handleVisibilityChange() {
+    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+    // الكود المتبقي دون تغيير
+}
 
+// --- تبديل السمة ---
+function initializeTheme() {
+    const savedTheme = localStorage.getItem('theme') || 'dark';
+    if (savedTheme === 'light') {
+        bodyElement.classList.add('light-mode');
+        themeToggleButton.innerHTML = '<i class="fa-solid fa-moon"></i>';
+    } else {
+        bodyElement.classList.remove('light-mode');
+        themeToggleButton.innerHTML = '<i class="fa-solid fa-sun"></i>';
+    }
+    const colorInputElement = document.getElementById('colorInput');
+    if (colorInputElement) {
+        colorInputElement.value = getComputedStyle(document.documentElement).getPropertyValue('--subtitle-color').trim();
+    }
+}
+
+function toggleTheme() {
+    bodyElement.classList.toggle('light-mode');
+    const isLightMode = bodyElement.classList.contains('light-mode');
+    localStorage.setItem('theme', isLightMode ? 'light' : 'dark');
+    themeToggleButton.innerHTML = isLightMode ? '<i class="fa-solid fa-moon"></i>' : '<i class="fa-solid fa-sun"></i>';
+    const colorInputElement = document.getElementById('colorInput');
+    if (colorInputElement) {
+        colorInputElement.value = getComputedStyle(document.documentElement).getPropertyValue('--subtitle-color').trim();
+    }
+}
+
+function handleFileSelectChange() {
+    if (torrentFileInput.files.length > 0) {
+        torrentFileInput.dataset.placeholder = `// ${torrentFileInput.files[0].name}`;
+        torrentFileInput.classList.add('file-has-value');
+        torrentFileInput.classList.remove('file-placeholder');
+    } else {
+        torrentFileInput.dataset.placeholder = "// DROP .TORRENT FILE";
+        torrentFileInput.classList.remove('file-has-value');
+        torrentFileInput.classList.add('file-placeholder');
+    }
+}
+
+function handleColorInputChange(event) {
+    document.documentElement.style.setProperty('--subtitle-color', event.target.value);
+}
+
+function updateSubtitleDisplay() {
+    const fontSizeDisplayElement = document.getElementById('fontSizeDisplay');
+    if (fontSizeDisplayElement) {
+        fontSizeDisplayElement.textContent = subtitleFontSize;
+    }
+    document.documentElement.style.setProperty('--subtitle-font-size', `${subtitleFontSize}px`);
+}
+
+// --- دوال WebSocket ---
+function connectWebSocket(onOpenCallback, requestDataForSend) {
+    if (wsReconnectTimeout) { clearTimeout(wsReconnectTimeout); wsReconnectTimeout = null; }
+    if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) {
+        console.warn('WS open/connecting. Closing before new.');
+        ws.onclose = null; ws.onerror = null; ws.close(1000, "Initiating new"); ws = null;
+    }
+    showLoader('CONNECTING_TO_GRID...'); hideError();
+    console.log(`Attempting WS connection to ${WS_URL}`);
+    ws = new WebSocket(WS_URL);
+    ws.onopen = () => {
+        console.log('WS open.');
+        wsReconnectAttempts = 0;
+        statusTextElement.textContent = 'CONNECTED. SENDING...';
+        if (onOpenCallback) { onOpenCallback(requestDataForSend); }
+    };
+    ws.onmessage = (event) => {
+        wsReconnectAttempts = 0;
+        try {
+            const data = JSON.parse(event.data);
+            handleWebSocketMessage(data);
+        } catch (error) {
+            console.error('WS parse error:', error, event.data.substring(0,200));
+            showError('SERVER_DATA_CORRUPT.');
+            hideLoader();
+        }
+    };
+    ws.onerror = (error) => {
+        console.error('WS error:', error);
+        showError('SERVER_CONN_ERROR. RECONNECTING...');
+    };
+    ws.onclose = (event) => {
+        console.log(`WS closed. Code: ${event.code}, Reason: "${event.reason||'N/A'}", Clean: ${event.wasClean}`);
+        const wasIntentional = event.code === 1000 || event.code === 1001;
+        ws = null;
+        if (wasIntentional) {
+            console.log("WS closed intentionally.");
+            hideLoader();
+        } else {
+            if (wsReconnectAttempts < MAX_WS_RECONNECT_ATTEMPTS) {
+                wsReconnectAttempts++;
+                const delay = Math.pow(2, wsReconnectAttempts) * 1000;
+                console.log(`Reconnect attempt ${wsReconnectAttempts} in ${delay/1000}s...`);
+                showError(`CONN_LOST. RECONNECTING (${wsReconnectAttempts}/${MAX_WS_RECONNECT_ATTEMPTS})...`);
+                showLoader(`RECONNECTING...`);
+                wsReconnectTimeout = setTimeout(() => {
+                    connectWebSocket(() => {
+                        if (currentRequestData) { sendMessage(currentRequestData); }
+                        else { resetUI(); }
+                    }, null);
+                }, delay);
+            } else {
+                console.error(`Max WS reconnects (${MAX_WS_RECONNECT_ATTEMPTS}) reached.`);
+                showError('SERVER_CONN_FAILED_PERMANENTLY. REFRESH.');
+                hideLoader();
+                resetUI();
+            }
+        }
+    };
+}
+
+function sendMessage(message) {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+        try {
+            const msg = JSON.stringify(message);
+            ws.send(msg);
+        } catch (error) {
+            console.error("WS send error:", error);
+            showError(`SEND_CMD_FAILED: ${error.message}`);
+        }
+    } else {
+        console.error('WS not open. Cannot send:', message.type);
+        showError('SERVER_CONN_UNAVAILABLE.');
+    }
+}
+
+function closeWebSocket(code = 1000, reason = "User action") {
+    if (ws) {
+        console.log(`Closing WS manually: ${code} ${reason}`);
+        if (wsReconnectTimeout) clearTimeout(wsReconnectTimeout);
+        wsReconnectAttempts = MAX_WS_RECONNECT_ATTEMPTS + 1;
+        ws.onclose = null; ws.onerror = null; ws.close(code, reason); ws = null;
+    } else {
+        console.log("closeWebSocket: ws already null.");
+    }
+}
+
+// --- معالجة رسائل WebSocket ---
+function handleWebSocketMessage(data) {
+    switch (data.type) {
+        case 'videoInfo': handleVideoInfo(data); break;
+        case 'status': handleStatusUpdate(data); break;
+        case 'error':
+            console.error(`Server error: ${data.message}`);
+            showError(`SERVER_ERROR :: ${data.message || 'UNKNOWN'}`);
+            hideLoader();
+            break;
+        case 'info':
+            console.log('Server info:', data.message);
+            if (!mainContentElement.classList.contains('visible')) {
+                statusTextElement.textContent = `INFO: ${data.message}`;
+            }
+            break;
+        default: console.warn('Unknown WS msg type:', data.type, data);
+    }
+}
+
+// --- التعامل مع معلومات الفيديو ---
+function handleVideoInfo(data) {
+    console.log('Received videoInfo:', data);
+    hideLoader();
+    showMainContent();
+    removeLocalSubtitleTrack();
+
+    currentFileId = data.fileId; currentVideoUrl = data.url; currentFileName = data.fileName; currentVideoIndex = data.videoFileIndex;
+    allVideoFiles = data.videoFiles || [];
+    allSubtitleFiles = (data.subtitleFiles || []).map(sub => ({ name: sub.name, originalIndex: sub.originalIndex, subtitleArrayIndex: sub.subtitleArrayIndex }));
+    allFilesData = data.allFiles || [];
+
+    torrentNameElement.textContent = data.fileName || 'N/A'; torrentFileIdElement.textContent = data.fileId || 'N/A'; torrentFileIdElement.title = data.fileId || 'N/A';
+    populateVideoSelect(allVideoFiles, currentVideoIndex); populateSubtitleList(allSubtitleFiles); buildFileTreeView(allFilesData);
+
+    if (!player) { console.error("Player not initialized!"); showError("PLAYER_ERROR_-_REFRESH"); return; }
+
+    const serverTracks = allSubtitleFiles.map(sub => ({
+        kind: 'subtitles',
+        label: sub.name || `Subtitle ${sub.subtitleArrayIndex + 1}`,
+        srclang: guessLanguageCode(sub.name) || `sub${sub.subtitleArrayIndex + 1}`,
+        src: `/subtitles/${data.fileId}/${sub.subtitleArrayIndex}`,
+        default: sub.subtitleArrayIndex === 0
+    }));
+    console.log('Generated Server Tracks:', serverTracks);
+
+    try {
         player.source = {
             type: 'video',
-            title: data.fileName,
+            title: data.fileName || 'Video Stream',
             sources: [{ src: data.url, type: getVideoMimeType(data.fileName) }],
-            tracks: tracks
+            tracks: serverTracks
         };
+        console.log("Plyr source updated with server data.");
+        player.play().catch(e => console.warn("Autoplay prevented:", e.message));
 
-        player.play().catch(e => console.warn("Autoplay needs user interaction:", e));
-        if (tracks.length > 0) {
+        if (serverTracks.length > 0) {
+            console.log(`Found ${serverTracks.length} server tracks. Enabling captions.`);
             setTimeout(() => {
-                try { if (player.captions && !player.captions.active) player.toggleCaptions(true); }
-                catch(e) { console.error("Error enabling captions:", e); }
-            }, 1500);
-        }
-    }
-
-    // --- تعبئة القائمة المنسدلة لاختيار الفيديو (No changes needed) ---
-    function populateVideoSelect(videoFiles, selectedVideoIndex) {
-        videoSelectElement.innerHTML = '';
-        if (videoFiles && videoFiles.length > 0) {
-            videoFiles.forEach((file) => {
-                const option = document.createElement('option');
-                option.value = file.index;
-                option.textContent = file.name;
-                if (file.index === selectedVideoIndex) {
-                    option.selected = true;
+                if (player && player.captions && !player.captions.active) {
+                    player.toggleCaptions(true);
+                    console.log('Captions ON for server subs.');
                 }
-                videoSelectElement.appendChild(option);
-            });
-            videoSelectionContainer.classList.toggle('visible', videoFiles.length > 1);
+            }, 1000);
         } else {
-            videoSelectionContainer.classList.remove('visible');
+            console.log('No server subtitle tracks.');
         }
+    } catch (e) {
+        console.error("Error setting Plyr source/playing:", e);
+        showError("PLAYER_ERROR_-_FAILED_TO_LOAD_VIDEO");
+        resetUI();
     }
+}
 
-    // --- تعبئة قائمة الترجمة (No changes needed) ---
-    function populateSubtitleList(subtitleFiles, fileId) {
-        subtitleListElement.innerHTML = '';
-        if (subtitleFiles && subtitleFiles.length > 0) {
-            subtitleCountElement.textContent = subtitleFiles.length;
-            subtitleFiles.forEach((sub) => {
-                const li = document.createElement('li');
-                li.textContent = sub.name || `Subtitle ${sub.index + 1}`;
-                subtitleListElement.appendChild(li);
-            });
-        } else {
-            subtitleCountElement.textContent = '0';
-            subtitleListElement.innerHTML = '<li>// NO_SUBTITLES_FOUND //</li>';
-        }
-    }
-
-    // --- بناء عرض المجلدات والملفات (No changes needed) ---
-    function buildFileTreeView(allFiles) {
-        filesTreeViewElement.innerHTML = '';
-        if (!allFiles || allFiles.length === 0) {
-            filesTreeViewElement.innerHTML = '<p style="color: var(--text-muted-color); text-align:center; font-family: \'Share Tech Mono\', monospace;">// NO_FILE_DATA //</p>';
-            return;
-        }
-        const groups = { videos: [], images: [], subtitles: [], text: [], audio: [], archives: [], others: [] };
-        allFiles.forEach(file => {
-            const lowerName = file.name.toLowerCase();
-            if (/\.(mp4|mkv|avi|mov|wmv|flv|webm)$/i.test(lowerName)) groups.videos.push(file);
-            else if (/\.(jpg|jpeg|png|gif|bmp|webp)$/i.test(lowerName)) groups.images.push(file);
-            else if (/\.(srt|vtt|sub|ssa|ass)$/i.test(lowerName)) groups.subtitles.push(file);
-            else if (/\.(txt|nfo|log|md)$/i.test(lowerName)) groups.text.push(file);
-            else if (/\.(mp3|wav|aac|flac|ogg|m4a)$/i.test(lowerName)) groups.audio.push(file);
-            else if (/\.(zip|rar|7z|tar|gz)$/i.test(lowerName)) groups.archives.push(file);
-            else groups.others.push(file);
+// --- تعبئة القوائم ---
+function populateVideoSelect(videoFiles, selectedOriginalIndex) {
+    videoSelectElement.innerHTML = '';
+    if (videoFiles && videoFiles.length > 0) {
+        videoFiles.forEach((file) => {
+            const option = document.createElement('option');
+            option.value = file.index;
+            option.textContent = `${file.name} (${formatBytes(file.length, 1)})`;
+            option.title = file.name;
+            if (file.index === selectedOriginalIndex) { option.selected = true; }
+            videoSelectElement.appendChild(option);
         });
-        const groupTitles = { videos: 'VIDEO_FILES', audio: 'AUDIO_FILES', subtitles: 'SUBTITLE_FILES', images: 'IMAGE_FILES', text: 'TEXT_FILES', archives: 'ARCHIVE_FILES', others: 'OTHER_FILES' };
-        const fileTypeIcons = { videos: 'fa-solid fa-file-video', audio: 'fa-solid fa-file-audio', subtitles: 'fa-solid fa-closed-captioning', images: 'fa-solid fa-file-image', text: 'fa-solid fa-file-lines', archives: 'fa-solid fa-file-zipper', others: 'fa-solid fa-file' };
-        const orderedGroups = ['videos', 'audio', 'subtitles', 'images', 'text', 'archives', 'others'];
-        orderedGroups.forEach(groupKey => {
-            if (groups[groupKey].length > 0) {
-                const groupElement = createFolderElement(groupTitles[groupKey], fileTypeIcons[groupKey], groups[groupKey]);
-                filesTreeViewElement.appendChild(groupElement);
-            }
+        videoSelectionContainer.classList.toggle('visible', videoFiles.length > 1);
+    } else {
+        videoSelectionContainer.classList.remove('visible');
+    }
+}
+
+function populateSubtitleList(processedSubtitleFiles) {
+    subtitleListElement.innerHTML = '';
+    if (processedSubtitleFiles && processedSubtitleFiles.length > 0) {
+        subtitleCountElement.textContent = processedSubtitleFiles.length;
+        processedSubtitleFiles.forEach((sub) => {
+            const li = document.createElement('li');
+            li.textContent = sub.name || `Subtitle ${sub.subtitleArrayIndex + 1}`;
+            li.title = sub.name || `Subtitle ${sub.subtitleArrayIndex + 1}`;
+            subtitleListElement.appendChild(li);
         });
+    } else {
+        subtitleCountElement.textContent = '0';
+        subtitleListElement.innerHTML = '<li>// NO_SUBTITLES_FOUND //</li>';
     }
+}
 
-    function createFolderElement(title, iconClass, files) {
-        const groupDiv = document.createElement('div'); groupDiv.className = 'folder-group';
-        const header = document.createElement('div'); header.className = 'folder-header'; header.setAttribute('aria-expanded', 'false'); header.setAttribute('role', 'button'); header.tabIndex = 0;
-        const titleSpan = document.createElement('span'); const folderIcon = document.createElement('i'); folderIcon.className = `fa-solid ${iconClass} fa-fw`; folderIcon.style.marginRight = "8px"; folderIcon.style.marginLeft = "8px";
-        titleSpan.appendChild(folderIcon); titleSpan.appendChild(document.createTextNode(`${title} (${files.length})`));
-        const arrowIcon = document.createElement('i'); arrowIcon.className = 'fa-solid fa-chevron-right folder-icon';
-        header.appendChild(titleSpan); header.appendChild(arrowIcon);
-        const filesList = document.createElement('div'); filesList.className = 'files-list'; filesList.setAttribute('aria-hidden', 'true');
-        files.forEach(file => {
-            const fileItem = document.createElement('div'); fileItem.className = 'file-item';
-            const fileIcon = document.createElement('i'); const itemIconClass = getIconForFile(file.name); fileIcon.className = `${itemIconClass} fa-fw`;
-            const infoDiv = document.createElement('div'); infoDiv.className = 'file-info'; const fileNameSpan = document.createElement('span'); fileNameSpan.className = 'file-name'; fileNameSpan.textContent = file.name; fileNameSpan.title = file.name; const fileSizeSpan = document.createElement('span'); fileSizeSpan.className = 'file-size'; fileSizeSpan.textContent = formatBytes(file.length);
-            infoDiv.appendChild(fileNameSpan); infoDiv.appendChild(fileSizeSpan);
-            fileItem.appendChild(fileIcon); fileItem.appendChild(infoDiv); filesList.appendChild(fileItem);
-        });
-        header.addEventListener('click', () => toggleFolder(header, filesList)); header.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleFolder(header, filesList); } });
-        groupDiv.appendChild(header); groupDiv.appendChild(filesList); return groupDiv;
+function buildFileTreeView(allFiles) {
+    filesTreeViewElement.innerHTML = '';
+    if (!allFiles || allFiles.length === 0) {
+        filesTreeViewElement.innerHTML = '<p style="color: var(--text-muted-color); text-align:center; font-family: \'Share Tech Mono\', monospace;">// NO_FILE_DATA //</p>';
+        return;
     }
-
-    function getIconForFile(filename) {
-        const lowerName = filename.toLowerCase();
-        if (/\.(mp4|mkv|avi|mov|wmv|flv|webm)$/i.test(lowerName)) return 'fa-solid fa-file-video';
-        if (/\.(jpg|jpeg|png|gif|bmp|webp)$/i.test(lowerName)) return 'fa-solid fa-file-image';
-        if (/\.(srt|vtt|sub|ssa|ass)$/i.test(lowerName)) return 'fa-solid fa-closed-captioning';
-        if (/\.(txt|nfo|log|md)$/i.test(lowerName)) return 'fa-solid fa-file-lines';
-        if (/\.(mp3|wav|aac|flac|ogg|m4a)$/i.test(lowerName)) return 'fa-solid fa-file-audio';
-        if (/\.(zip|rar|7z|tar|gz)$/i.test(lowerName)) return 'fa-solid fa-file-zipper';
-        return 'fa-solid fa-file';
-    }
-
-    function toggleFolder(header, filesList) {
-        const isOpen = header.getAttribute('aria-expanded') === 'true';
-        header.setAttribute('aria-expanded', String(!isOpen));
-        filesList.setAttribute('aria-hidden', String(isOpen));
-        header.classList.toggle('open', !isOpen);
-        if (!isOpen) {
-            filesList.style.display = 'block';
-            requestAnimationFrame(() => {
-                 // Check if scrollHeight is greater than max-height defined in CSS
-                 const maxHeight = parseInt(window.getComputedStyle(filesList).maxHeight, 10);
-                 filesList.style.maxHeight = filesList.scrollHeight + "px";
-                 if (filesList.scrollHeight > maxHeight) {
-                     filesList.style.overflowY = 'auto'; // Ensure scrollbar appears if needed
-                 }
-                 filesList.style.padding = "10px 15px";
-             });
-        } else {
-            filesList.style.maxHeight = "0";
-            filesList.style.padding = "0 15px";
-            filesList.style.overflowY = 'hidden'; // Hide scrollbar when closing
-             filesList.addEventListener('transitionend', function handler() {
-                 if (header.getAttribute('aria-expanded') === 'false') {
-                     filesList.style.display = 'none';
-                 }
-                 filesList.removeEventListener('transitionend', handler);
-             });
+    const groups = { videos: [], images: [], subtitles: [], text: [], audio: [], archives: [], others: [] };
+    allFiles.forEach(file => {
+        const l = file.name?.toLowerCase() || '';
+        if (!l) return;
+        if (/\.(mp4|mkv|avi|mov|wmv|flv|webm)$/i.test(l)) groups.videos.push(file);
+        else if (/\.(jpg|jpeg|png|gif|bmp|webp|ico)$/i.test(l)) groups.images.push(file);
+        else if (/\.(srt|vtt|sub|ssa|ass)$/i.test(l)) groups.subtitles.push(file);
+        else if (/\.(txt|nfo|log|md|ini|conf|cfg)$/i.test(l)) groups.text.push(file);
+        else if (/\.(mp3|wav|aac|flac|ogg|m4a)$/i.test(l)) groups.audio.push(file);
+        else if (/\.(zip|rar|7z|tar|gz|iso)$/i.test(l)) groups.archives.push(file);
+        else groups.others.push(file);
+    });
+    const groupTitles = { videos: 'VIDEO_FILES', audio: 'AUDIO_FILES', subtitles: 'SUBTITLE_FILES', images: 'IMAGE_FILES', text: 'TEXT_FILES', archives: 'ARCHIVE_FILES', others: 'OTHER_FILES' };
+    const fileTypeIcons = { videos: 'fa-solid fa-file-video', audio: 'fa-solid fa-file-audio', subtitles: 'fa-solid fa-closed-captioning', images: 'fa-solid fa-file-image', text: 'fa-solid fa-file-lines', archives: 'fa-solid fa-file-zipper', others: 'fa-solid fa-file' };
+    const orderedGroups = ['videos', 'audio', 'subtitles', 'images', 'text', 'archives', 'others'];
+    let contentAdded = false;
+    orderedGroups.forEach(gk => {
+        if (groups[gk].length > 0) {
+            const ge = createFolderElement(groupTitles[gk], fileTypeIcons[gk], groups[gk]);
+            filesTreeViewElement.appendChild(ge);
+            contentAdded = true;
         }
+    });
+    if (!contentAdded) {
+        filesTreeViewElement.innerHTML = '<p style="color: var(--text-muted-color); text-align:center; font-family: \'Share Tech Mono\', monospace;">// NO_VALID_FILES_TO_DISPLAY //</p>';
     }
+}
 
-    // --- التعامل مع تحديثات الحالة (No changes needed) ---
-    function handleStatusUpdate(data) {
-        if (data.fileId !== currentFileId) return;
-        const progress = Math.min(100, (data.progress * 100)).toFixed(1);
-        progressBarFill.style.width = `${progress}%`;
-        progressPercentElement.textContent = `${progress}%`;
-        torrentPeersElement.textContent = data.peers || 0;
-        torrentSeedsElement.textContent = data.seeds || 0;
-        torrentLeechersElement.textContent = data.leechers || 0;
-        torrentDownloadSpeedElement.textContent = formatBytesPerSecond(data.downloadSpeed);
-        torrentUploadSpeedElement.textContent = formatBytesPerSecond(data.uploadSpeed);
-        if (loaderElement.classList.contains('visible')) {
-             statusTextElement.textContent = `DOWNLOADING... (${progress}%) - PEERS: ${data.peers}`;
-        }
+function createFolderElement(title, iconClass, files) {
+    const gd = document.createElement('div'); gd.className = 'folder-group';
+    const h = document.createElement('div'); h.className = 'folder-header'; h.setAttribute('aria-expanded', 'false'); h.setAttribute('role', 'button'); h.tabIndex = 0;
+    const ts = document.createElement('span');
+    const fi = document.createElement('i'); fi.className = `fa-solid ${iconClass} fa-fw`; fi.style.marginRight = "8px"; fi.style.marginLeft = "8px";
+    ts.appendChild(fi); ts.appendChild(document.createTextNode(`${title} (${files.length})`));
+    const ai = document.createElement('i'); ai.className = 'fa-solid fa-chevron-right folder-icon';
+    h.appendChild(ts); h.appendChild(ai);
+    const fl = document.createElement('div'); fl.className = 'files-list'; fl.setAttribute('aria-hidden', 'true');
+    files.forEach(f => {
+        const item = document.createElement('div'); item.className = 'file-item';
+        const ic = document.createElement('i'); const itemIconClass = getIconForFile(f.name); ic.className = `${itemIconClass} fa-fw`;
+        const info = document.createElement('div'); info.className = 'file-info';
+        const fn = document.createElement('span'); fn.className = 'file-name'; fn.textContent = f.name || '[No Name]'; fn.title = f.name || '';
+        const fs = document.createElement('span'); fs.className = 'file-size'; fs.textContent = formatBytes(f.length);
+        info.appendChild(fn); info.appendChild(fs); item.appendChild(ic); item.appendChild(info); fl.appendChild(item);
+    });
+    h.addEventListener('click', () => toggleFolder(h, fl));
+    h.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleFolder(h, fl); } });
+    gd.appendChild(h); gd.appendChild(fl);
+    return gd;
+}
+
+function getIconForFile(filename) {
+    const l = filename?.toLowerCase() || '';
+    if (!l) return 'fa-solid fa-file-circle-question';
+    if (/\.(mp4|mkv|avi|mov|wmv|flv|webm)$/i.test(l)) return 'fa-solid fa-file-video';
+    if (/\.(jpg|jpeg|png|gif|bmp|webp|ico)$/i.test(l)) return 'fa-solid fa-file-image';
+    if (/\.(srt|vtt|sub|ssa|ass)$/i.test(l)) return 'fa-solid fa-closed-captioning';
+    if (/\.(txt|nfo|log|md|ini|conf|cfg)$/i.test(l)) return 'fa-solid fa-file-lines';
+    if (/\.(mp3|wav|aac|flac|ogg|m4a)$/i.test(l)) return 'fa-solid fa-file-audio';
+    if (/\.(zip|rar|7z|tar|gz|iso)$/i.test(l)) return 'fa-solid fa-file-zipper';
+    return 'fa-solid fa-file';
+}
+
+function toggleFolder(header, filesList) {
+    const isOpen = header.getAttribute('aria-expanded') === 'true';
+    header.setAttribute('aria-expanded', String(!isOpen));
+    filesList.setAttribute('aria-hidden', String(isOpen));
+    header.classList.toggle('open', !isOpen);
+    filesList.style.display = isOpen ? 'none' : 'block';
+    if (!isOpen) {
+        filesList.style.maxHeight = null;
+        const sh = filesList.scrollHeight;
+        filesList.style.maxHeight = sh + "px";
+        filesList.style.padding = "10px 15px";
+    } else {
+        filesList.style.maxHeight = "0";
+        filesList.style.padding = "0 15px";
+        filesList.style.overflowY = 'hidden';
     }
+}
 
-    // --- بدء البث (No changes needed) ---
-    function startFromMagnet() {
-        const magnetLink = magnetLinkInput.value.trim();
-        if (!magnetLink || !magnetLink.startsWith("magnet:")) {
-            showError('INVALID_MAGNET_URI.'); return;
-        }
-        const request = { type: 'magnetLink', magnetLink: magnetLink };
-        startStreamingProcess(request);
+// --- التعامل مع تحديثات الحالة ---
+function handleStatusUpdate(data) {
+    if (!currentFileId || data.fileId !== currentFileId) { return; }
+    const p = Math.min(100, Math.max(0, (Number(data.progress) || 0) * 100)).toFixed(1);
+    const peers = Number(data.peers) || 0;
+    const seeds = Number(data.seeds) || 0;
+    const leechers = Number(data.leechers) || 0;
+    const down = Number(data.downloadSpeed) || 0;
+    const up = Number(data.uploadSpeed) || 0;
+    progressBarFill.style.width = `${p}%`;
+    progressPercentElement.textContent = `${p}%`;
+    torrentPeersElement.textContent = peers;
+    torrentSeedsElement.textContent = seeds;
+    torrentLeechersElement.textContent = leechers;
+    torrentDownloadSpeedElement.textContent = formatBytesPerSecond(down);
+    torrentUploadSpeedElement.textContent = formatBytesPerSecond(up);
+    if (loaderElement.classList.contains('visible')) {
+        statusTextElement.textContent = `DOWNLOADING... (${p}%) - PEERS: ${peers}`;
     }
+}
 
-    function startFromFile() {
-        const file = torrentFileInput.files[0];
-        if (!file || !file.name.toLowerCase().endsWith('.torrent')) {
-            showError('INVALID_TORRENT_FILE.'); return;
-        }
-        showLoader('READING_TORRENT_FILE...');
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            const fileDataUrl = e.target.result; const base64Data = fileDataUrl.split(',')[1];
-            if (!base64Data) { showError('FILE_READ_ERROR.'); hideLoader(); return; }
-            const request = { type: 'torrentFile', fileData: base64Data };
+// --- بدء البث ---
+function startFromMagnet() {
+    const link = magnetLinkInput.value.trim();
+    if (!link || !link.startsWith("magnet:")) {
+        showError('INVALID_MAGNET_URI.');
+        magnetLinkInput.focus();
+        return;
+    }
+    const request = { type: 'magnetLink', magnetLink: link };
+    startStreamingProcess(request);
+}
+
+function startFromFile() {
+    const fileInput = torrentFileInput;
+    const file = fileInput.files[0];
+    if (!file || !file.name.toLowerCase().endsWith('.torrent')) {
+        showError('INVALID_TORRENT_FILE. SELECT_".torrent"_FILE.');
+        fileInput.value = '';
+        handleFileSelectChange();
+        return;
+    }
+    showLoader('READING_TORRENT_FILE...');
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        try {
+            const dataUrl = e.target.result;
+            const base64 = dataUrl.split(',')[1];
+            if (!base64) { throw new Error("Could not extract Base64 data."); }
+            const request = { type: 'torrentFile', fileData: base64 };
             startStreamingProcess(request);
-        };
-        reader.onerror = (e) => { console.error("FileReader error:", e); showError('FILE_READ_ERROR.'); hideLoader(); };
-        reader.readAsDataURL(file);
-    }
-
-    function startStreamingProcess(requestData) {
-        const initialRequest = { ...requestData };
-        currentVideoIndex = 0;
-
-        if (ws) closeWebSocket(1001, "Starting new stream process");
-        resetProgressAndDetails();
-
-        connectWebSocket(() => sendMessage(initialRequest), requestData);
-    }
-
-    // --- دالة تغيير الفيديو (No changes needed) ---
-    function changeVideo() {
-        const newIndex = parseInt(videoSelectElement.value, 10);
-        if (isNaN(newIndex) || newIndex === currentVideoIndex) {
-             console.log(`Video selection unchanged or invalid. Selected: ${newIndex}, Current: ${currentVideoIndex}`);
-             if (!isNaN(currentVideoIndex)) videoSelectElement.value = currentVideoIndex;
-             return;
+        } catch (err) {
+            console.error("Error processing file:", err);
+            showError(`FILE_READ_PROC_ERROR: ${err.message}`);
+            hideLoader();
+            fileInput.value = '';
+            handleFileSelectChange();
         }
+    };
+    reader.onerror = (e) => {
+        console.error("FileReader error:", e);
+        showError('FILE_READ_ERROR. CHECK_PERMISSIONS.');
+        hideLoader();
+        fileInput.value = '';
+        handleFileSelectChange();
+    };
+    reader.readAsDataURL(file);
+}
 
-        if (!currentRequestData) {
-            showError("CANNOT_CHANGE_VIDEO_MISSING_ORIGINAL_REQUEST_DATA.");
-             if (!isNaN(currentVideoIndex)) videoSelectElement.value = currentVideoIndex;
-            return;
+function startStreamingProcess(requestData) {
+    console.log("Starting new streaming process...", requestData.type);
+    currentRequestData = { ...requestData }; currentVideoIndex = 0;
+    removeLocalSubtitleTrack();
+    if (ws) { closeWebSocket(1001, "Starting new stream process"); }
+    resetProgressAndDetails();
+    if (player) { try { player.stop(); player.source = null; console.log("Player stopped/cleared for new stream."); } catch (e) { console.warn("Error stopping player:", e); } }
+    mainContentElement.classList.remove('visible'); videoContainerElement.classList.remove('visible');
+    connectWebSocket(sendMessage, requestData);
+}
+
+// --- تغيير الفيديو ---
+function changeVideo() {
+    const newIndex = parseInt(videoSelectElement.value, 10);
+    if (isNaN(newIndex) || newIndex === currentVideoIndex) { return; }
+    if (!currentRequestData) { showError("CANNOT_CHANGE_VIDEO :: MISSING_ORIGINAL_DATA."); if (!isNaN(currentVideoIndex)) videoSelectElement.value = currentVideoIndex; return; }
+    console.log(`Video change request. Current: ${currentVideoIndex}, New: ${newIndex}`);
+    removeLocalSubtitleTrack();
+    if (player) { try { player.stop(); player.source = null; console.log("Player stopped/cleared for video change."); } catch (e) { console.warn("Error stopping player:", e); } }
+    resetProgressAndDetails(); showLoader(`SWITCHING_TO_VIDEO_${newIndex}...`);
+    const newRequest = { ...currentRequestData, videoIndex: newIndex }; currentRequestData = newRequest;
+    closeWebSocket(1001, "Changing video file");
+    setTimeout(() => { connectWebSocket(sendMessage, newRequest); }, 300);
+}
+
+// --- دوال الواجهة المساعدة ---
+function showLoader(message = 'PROCESSING...') { statusTextElement.textContent = message; loaderElement.classList.add('visible'); hideError(); }
+function hideLoader() { loaderElement.classList.remove('visible'); }
+function showError(message) { errorMessageElement.textContent = `// ERROR: ${message} //`; errorMessageElement.style.display = 'block'; console.error(`UI Error: ${message}`); }
+function hideError() { errorMessageElement.style.display = 'none'; errorMessageElement.textContent = ''; }
+
+function showMainContent() {
+    if (!mainContentElement.classList.contains('visible')) {
+        console.log("Showing main content.");
+        inputSection.style.display = 'none';
+        document.querySelector('main.container').classList.remove('initial');
+        mainContentElement.style.display = 'grid';
+        requestAnimationFrame(() => {
+            mainContentElement.classList.add('visible');
+            videoContainerElement.classList.add('visible');
+            bodyElement.classList.remove('no-scroll');
+        });
+    }
+}
+
+function resetUI() {
+    console.warn("Resetting UI to initial state.");
+    hideLoader(); hideError();
+    removeLocalSubtitleTrack();
+    if (player) { try { player.stop(); player.source = null; } catch(e){ console.warn("Error stopping player in reset:", e);} }
+    videoContainerElement.classList.remove('visible'); videoSelectionContainer.classList.remove('visible'); mainContentElement.classList.remove('visible');
+    currentFileId = null; currentVideoUrl = null; currentFileName = ''; currentRequestData = null; currentVideoIndex = 0;
+    allVideoFiles = []; allSubtitleFiles = []; allFilesData = [];
+    resetProgressAndDetails();
+    filesTreeViewElement.innerHTML = '<p style="color: var(--text-muted-color); text-align:center; font-family: \'Share Tech Mono\', monospace;">AWAITING_FILE_DATA...</p>';
+    if (srtFileInputElement) { srtFileInputElement.value = null; }
+    setTimeout(() => {
+        if (!mainContentElement.classList.contains('visible')) {
+            mainContentElement.style.display = 'none';
+            inputSection.style.display = 'block';
+            document.querySelector('main.container').classList.add('initial');
+            bodyElement.classList.add('no-scroll');
+            magnetLinkInput.value = '';
+            torrentFileInput.value = '';
+            handleFileSelectChange();
         }
+    }, 500);
+    closeWebSocket(1000, "UI Reset");
+}
 
-        console.log(`User requested video change to index: ${newIndex}`);
+function resetProgressAndDetails() {
+    torrentNameElement.textContent = '...'; torrentFileIdElement.textContent = '...'; torrentFileIdElement.title = '';
+    torrentPeersElement.textContent = '0'; torrentSeedsElement.textContent = '0'; torrentLeechersElement.textContent = '0';
+    torrentDownloadSpeedElement.textContent = '0 B/s'; torrentUploadSpeedElement.textContent = '0 B/s';
+    progressBarFill.style.width = '0%'; progressPercentElement.textContent = '0%';
+    subtitleCountElement.textContent = '0'; subtitleListElement.innerHTML = '';
+    videoSelectElement.innerHTML = ''; videoSelectionContainer.classList.remove('visible');
+}
 
-        if(player) {
-            player.stop();
-            player.source = null;
-            console.log("Player stopped and source cleared before changing video.");
-        } else {
-            console.warn("Player object not found during video change.");
-        }
-        resetProgressAndDetails();
-
-        showLoader(`SWITCHING_TO_SELECTED_VIDEO...`);
-
-        const newRequest = { ...currentRequestData, videoIndex: newIndex };
-
-        closeWebSocket(1000, "Changing video file");
-
-        setTimeout(() => {
-             console.log("Attempting WS reconnect for new video index...");
-            connectWebSocket(() => {
-                 console.log("Reconnected. Sending request for new video index:", newIndex);
-                sendMessage(newRequest);
-            }, currentRequestData);
-        }, 300);
+// --- وظائف الأزرار ---
+function copyStreamLink() {
+    if (currentVideoUrl && currentFileId) {
+        const url = `${window.location.origin}${currentVideoUrl}`;
+        navigator.clipboard.writeText(url).then(() => {
+            const btn = document.getElementById('copyLinkButton');
+            if (!btn) return;
+            const orig = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-check"></i> COPIED!';
+            btn.style.backgroundColor = 'var(--success-color)';
+            btn.style.color = '#000';
+            setTimeout(() => { btn.innerHTML = orig; btn.style.backgroundColor = ''; btn.style.color = ''; }, 2000);
+        }).catch(err => {
+            console.error('Copy failed: ', err);
+            alert('// COPY_FAILED //');
+        });
+    } else {
+        alert('// NO_STREAM_URL_AVAILABLE //');
     }
+}
 
+function closeConnection() {
+    console.log("User initiated connection termination.");
+    showLoader('TERMINATING_CONNECTION...');
+    removeLocalSubtitleTrack();
+    closeWebSocket(1000, "User closed connection manually");
+    setTimeout(resetUI, 500);
+}
 
-    // --- دوال الواجهة المساعدة (Updated for Cyberpunk text) ---
-    function showLoader(message = 'PROCESSING...') { statusTextElement.textContent = message; loaderElement.classList.add('visible'); hideError(); }
-    function hideLoader() { loaderElement.classList.remove('visible'); }
-    function showError(message) { errorMessageElement.textContent = `// ERROR: ${message} //`; errorMessageElement.style.display = 'block'; }
-    function hideError() { errorMessageElement.style.display = 'none'; errorMessageElement.textContent = ''; }
-    function showMainContent() { inputSection.style.display = 'none'; const c = document.querySelector('main.container'); c.classList.remove('initial'); mainContentElement.style.display = 'grid'; mainContentElement.classList.add('visible'); videoContainerElement.classList.add('visible'); setTimeout(() => { document.body.classList.remove('no-scroll'); }, 50); }
-    function resetUI() {
-         hideLoader();
-         if (player) { player.stop(); player.source = null; }
-         videoContainerElement.classList.remove('visible');
-         videoSelectionContainer.classList.remove('visible');
-         mainContentElement.classList.remove('visible');
-         setTimeout(() => {
-            if (!mainContentElement.classList.contains('visible')) {
-                 mainContentElement.style.display = 'none';
-            }
-          }, 500);
-         inputSection.style.display = 'block';
-         const container = document.querySelector('main.container');
-         container.classList.add('initial');
-         document.body.classList.add('no-scroll');
-         magnetLinkInput.value = '';
-         torrentFileInput.value = '';
-         torrentFileInput.dispatchEvent(new Event('change'));
-         resetProgressAndDetails();
-         hideError();
-         currentFileId = null;
-         currentVideoUrl = null;
-         currentRequestData = null;
-         currentVideoIndex = 0;
-         allVideoFiles = [];
-         allFilesData = [];
-         filesTreeViewElement.innerHTML = '<p style="color: var(--text-muted-color); text-align:center; font-family: \'Share Tech Mono\', monospace;">...</p>';
-         if (ws) closeWebSocket(1000, "UI Reset");
+// --- وظائف التحكم بالترجمة ---
+function toggleTranslationPopup() {
+    const popup = document.getElementById('translationPopup');
+    if (popup) {
+        popup.classList.toggle('show');
+    } else {
+        console.error("Translation popup element not found!");
     }
+}
 
-    function resetProgressAndDetails() {
-         torrentNameElement.textContent = '...';
-         torrentFileIdElement.textContent = '...';
-         torrentPeersElement.textContent = '0';
-         torrentSeedsElement.textContent = '0';
-         torrentLeechersElement.textContent = '0';
-         torrentDownloadSpeedElement.textContent = '0 B/s';
-         torrentUploadSpeedElement.textContent = '0 B/s';
-         progressBarFill.style.width = '0%';
-         progressPercentElement.textContent = '0%';
-         subtitleCountElement.textContent = '0';
-         subtitleListElement.innerHTML = '';
-         videoSelectElement.innerHTML = '';
-    }
+function changeSubtitleSize(amount) {
+    subtitleFontSize = Math.max(10, Math.min(50, subtitleFontSize + amount));
+    updateSubtitleDisplay();
+}
 
-    // --- وظائف الأزرار (Updated for Cyberpunk text) ---
-    function copyStreamLink() {
-         if (currentVideoUrl) {
-             const fullURL = `${window.location.origin}${currentVideoUrl}`;
-             navigator.clipboard.writeText(fullURL).then(() => {
-                 const btn = document.getElementById('copyLinkButton'); const originalHTML = btn.innerHTML;
-                 btn.innerHTML = '<i class="fa-solid fa-check"></i> COPIED';
-                 setTimeout(() => { btn.innerHTML = originalHTML; }, 2000);
-             }).catch(err => { console.error('Copy failed: ', err); alert('// COPY_FAILED //'); });
-         } else { alert('// NO_STREAM_URL_AVAILABLE //'); }
-    }
+// --- دوال مساعدة للتنسيق ---
+function formatBytes(bytes, decimals = 1) {
+    if (!Number.isFinite(bytes) || bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const dm = decimals < 0 ? 0 : decimals;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    const index = Math.min(i, sizes.length - 1);
+    return parseFloat((bytes / Math.pow(k, index)).toFixed(dm)) + ' ' + sizes[index];
+}
 
-    function closeConnection() {
-         showLoader('TERMINATING_CONNECTION...');
-         closeWebSocket(1000, "User closed connection manually");
-         setTimeout(resetUI, 1000);
-    }
+function formatBytesPerSecond(bytes) {
+    if (!Number.isFinite(bytes)) return '0 B/s';
+    return formatBytes(bytes) + '/s';
+}
 
-    // --- وظائف التحكم بالترجمة (No changes needed) ---
-    function toggleTranslationPopup() { document.getElementById('translationPopup').classList.toggle('show'); }
-    function changeSubtitleSize(amount) { subtitleFontSize = Math.max(10, Math.min(50, subtitleFontSize + amount)); updateSubtitleDisplay(); }
+function getVideoMimeType(fileName = '') {
+    const l = fileName?.toLowerCase() || '';
+    if (!l) return 'video/mp4';
+    if (l.endsWith('.mp4') || l.endsWith('.m4v')) return 'video/mp4';
+    if (l.endsWith('.webm')) return 'video/webm';
+    if (l.endsWith('.mkv')) return 'video/mp4';
+    if (l.endsWith('.mov')) return 'video/quicktime';
+    if (l.endsWith('.avi')) return 'video/mp4';
+    console.debug(`[MimeType] Unknown video extension "${fileName}", defaulting video/mp4.`);
+    return 'video/mp4';
+}
 
-    // --- دوال مساعدة للتنسيق (No changes needed) ---
-    function formatBytes(bytes, decimals = 1) { if (bytes === 0 || !bytes) return '0 Bytes'; const k = 1024; const dm = decimals < 0 ? 0 : decimals; const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB']; const i = Math.floor(Math.log(bytes) / Math.log(k)); const index = Math.min(i, sizes.length - 1); return parseFloat((bytes / Math.pow(k, index)).toFixed(dm)) + ' ' + sizes[index]; }
-    function formatBytesPerSecond(bytes) { return formatBytes(bytes) + '/s'; }
-    function getVideoMimeType(fileName = '') { const l = fileName.toLowerCase(); if (l.endsWith('.mp4')) return 'video/mp4'; if (l.endsWith('.webm')) return 'video/webm'; if (l.endsWith('.mkv')) return 'video/mp4'; /* Treat MKV as MP4 for browser compatibility */ if (l.endsWith('.mov')) return 'video/quicktime'; if (l.endsWith('.avi')) return 'video/x-msvideo'; return 'video/mp4'; /* Default */ }
-    function guessLanguageCode(filename = '') { const l = filename.toLowerCase(); if (l.includes('arabic') || l.includes('arab') || l.match(/\bar\b/)) return 'ar'; if (l.includes('english') || l.includes('eng') || l.match(/\ben\b/)) return 'en'; if (l.includes('french') || l.includes('français') || l.match(/\bfr\b/)) return 'fr'; if (l.includes('spanish') || l.includes('español') || l.match(/\bes\b/)) return 'es'; if (l.includes('german') || l.includes('deutsch') || l.match(/\bde\b/)) return 'de'; return null; }
-
+function guessLanguageCode(filename = '') {
+    const l = filename?.toLowerCase() || '';
+    if (!l) return null;
+    if (l.includes('arabic') || l.includes('arab') || l.match(/\bar\b/)) return 'ar';
+    if (l.includes('english') || l.includes('eng') || l.match(/\ben\b/)) return 'en';
+    if (l.includes('french') || l.includes('fran') || l.match(/\bfr\b/)) return 'fr';
+    if (l.includes('spanish') || l.includes('espa') || l.match(/\bes\b/)) return 'es';
+    if (l.includes('german') || l.includes('deut') || l.match(/\bde\b/)) return 'de';
+    if (l.includes('italian') || l.includes('ita') || l.match(/\bit\b/)) return 'it';
+    if (l.includes('portuguese') || l.includes('portu') || l.match(/\bpt\b/)) return 'pt';
+    if (l.includes('russian') || l.includes('russ') || l.match(/\bru\b/)) return 'ru';
+    if (l.includes('japanese') || l.includes('japan') || l.match(/\bja\b/) || l.match(/\bjp\b/)) return 'ja';
+    if (l.includes('chinese') || l.includes('chin') || l.match(/\bzh\b/) || l.match(/\bcn\b/)) return 'zh';
+    if (l.includes('korean') || l.includes('kore') || l.match(/\bko\b/) || l.match(/\bkr\b/)) return 'ko';
+    return null;
+}
 </script>
-
 </body>
 </html>
